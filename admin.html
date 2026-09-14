@@ -1,0 +1,803 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Elite X Gamers — Admin Control Center</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="admin-page">
+    <!-- Admin Login Screen -->
+    <div id="adminLogin" class="login-wrap">
+        <div class="login-box">
+            <div class="brand" style="justify-content:center; margin-bottom:12px;">
+                <span class="brand-mark">EXG</span>
+                <span>ELITE X GAMERS</span>
+            </div>
+            <span class="eyebrow" style="display:block; text-align:center;">ADMIN CONTROL CENTER</span>
+            <h1 style="text-align:center;">Staff Sign In</h1>
+            <p style="text-align:center;">Sign in with an authorized administrator account for <code>elitexgamers-17353</code>.</p>
+            <form id="loginForm">
+                <input id="adminEmail" type="email" placeholder="Administrator Email" value="admin@elitexgamers.com" required autocomplete="email">
+                <input id="adminPassword" type="password" placeholder="Password" value="Admin@123456" required autocomplete="current-password">
+                <button type="submit" class="btn btn-primary full">Sign In to Control Center</button>
+                <button id="quickAdminBtn" type="button" class="btn btn-secondary full" style="margin-top:10px;">⚡ Auto-Setup / Login as Default Admin</button>
+            </form>
+            <div style="margin-top:12px; font-size:12px; color:var(--muted); text-align:center; background:#0c0e15; border:1px solid var(--line); border-radius:8px; padding:10px;">
+                <span>Default Superadmin Credentials:</span><br>
+                Email: <strong style="color:var(--gold);">admin@elitexgamers.com</strong><br>
+                Password: <strong style="color:var(--gold);">Admin@123456</strong>
+            </div>
+            <p id="loginError" class="error" style="text-align:center;"></p>
+            <div style="text-align:center; margin-top:16px;">
+                <a href="index.html" style="color:var(--muted); font-size:13px;">← Return to Player Website</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Dashboard Shell -->
+    <div id="adminDashboard" class="admin-shell hidden">
+        <aside class="sidebar">
+            <div class="sidebar-brand brand">
+                <span class="brand-mark">EXG</span>
+                <span>ELITE X GAMERS</span>
+            </div>
+            <nav>
+                <button class="side-link active" data-section="dashboard">▦ Dashboard</button>
+                <button class="side-link" data-section="users">♙ Users / Players</button>
+                <button class="side-link" data-section="tournaments">🏆 Tournaments</button>
+                <button class="side-link" data-section="matches">◈ Matches & Rooms</button>
+                <button class="side-link" data-section="br_results">🪂 BR Results</button>
+                <button class="side-link" data-section="1v1_matches">⚔️ 1v1 Matches</button>
+                <button class="side-link" data-section="results">📋 Results Archive</button>
+                <button class="side-link" data-section="deposits">＋ Deposits <i id="depositBadge"></i></button>
+                <button class="side-link" data-section="withdrawals">↙ Withdrawals <i id="withdrawBadge"></i></button>
+                <button class="side-link" data-section="wallets">₹ Wallets Audit</button>
+                <button class="side-link" data-section="transactions">↕ Transactions</button>
+                <button class="side-link" data-section="notifications">🔔 Notifications</button>
+                <button class="side-link" data-section="support">🎧 Support Inbox <i id="supportBadge"></i></button>
+                <button class="side-link" data-section="banners">▧ Hero Banners</button>
+                <button class="side-link" data-section="faqs">❓ FAQs</button>
+                <button class="side-link" data-section="payments">⚙ Payment Settings</button>
+                <button class="side-link" data-section="appsettings">☷ App Settings</button>
+                <button class="side-link" data-section="admin_mgmt">🛡 Admin Staff</button>
+            </nav>
+            <div class="sidebar-bottom">
+                <a class="side-link" href="index.html" target="_blank">↗ Player Portal</a>
+                <button class="side-link logout-text" id="logoutButton">↪ Sign Out</button>
+            </div>
+        </aside>
+
+        <main class="admin-content">
+            <header class="admin-header topbar" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; padding-bottom:16px; border-bottom:1px solid var(--line);">
+                <div class="admin-user-badge" style="display:flex; align-items:center; gap:8px; background:#11131c; padding:8px 16px; border-radius:12px; border:1px solid var(--line); font-size:13px;">
+                    <span style="color:var(--muted);">Active Staff:</span>
+                    <strong id="adminEmailDisplay" style="color:var(--gold);">—</strong>
+                </div>
+            </header>
+
+            <!-- 1. DASHBOARD -->
+            <section id="section-dashboard" class="admin-section">
+                <div class="admin-stats">
+                    <div class="admin-stat"><span>Registered Users</span><strong id="statUsers">—</strong></div>
+                    <div class="admin-stat"><span>Total Matches</span><strong id="statTournaments">—</strong></div>
+                    <div class="admin-stat"><span>Pending Deposits</span><strong id="statDeposits" style="color:var(--gold);">—</strong></div>
+                    <div class="admin-stat"><span>Pending Withdrawals</span><strong id="statWithdrawals" style="color:var(--red);">—</strong></div>
+                </div>
+                <div class="admin-grid">
+                    <div class="admin-panel">
+                        <span class="eyebrow">INFRASTRUCTURE STATUS</span>
+                        <h2>System Integrity</h2>
+                        <div class="activity">
+                            <div><span>Firebase Auth (17353)</span><b>Connected</b></div>
+                            <div><span>Firestore Database</span><b>Active & Secure</b></div>
+                            <div><span>Razorpay Gateway</span><b>rzp_live_TbxTWY1CD6udie</b></div>
+                        </div>
+                    </div>
+                    <div class="admin-panel">
+                        <span class="eyebrow">SHORTCUTS</span>
+                        <h2>Quick Actions</h2>
+                        <div class="quick-actions">
+                            <button class="quick-action" data-section="1v1_matches">Manage 1v1 Matches</button>
+                            <button class="quick-action" data-section="br_results">Process BR Results</button>
+                            <button class="quick-action" data-section="deposits">Review Deposits</button>
+                            <button class="quick-action" data-section="withdrawals">Review Cashouts</button>
+                            <button class="quick-action" data-section="support">Support Tickets</button>
+                            <button class="quick-action" data-section="tournaments">New Match</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2. USERS -->
+            <section id="section-users" class="admin-section hidden">
+                <div class="section-toolbar">
+                    <div>
+                        <span class="eyebrow">PLAYER DIRECTORY</span>
+                        <h2>User Management</h2>
+                        <p>Inspect player accounts, adjust wallet balances, and manage access.</p>
+                    </div>
+                    <div class="user-tools">
+                        <input type="search" id="userSearch" placeholder="Search UID, email or username..." class="search-input">
+                        <button id="refreshUsersButton" class="btn btn-secondary">Refresh</button>
+                    </div>
+                </div>
+                <div class="admin-panel table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Player</th>
+                                <th>Email</th>
+                                <th>Balance</th>
+                                <th>Locked</th>
+                                <th>Total Won</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTable">
+                            <tr><td colspan="7">Loading users...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- 3. TOURNAMENTS -->
+            <section id="section-tournaments" class="admin-section hidden">
+                <div class="section-toolbar">
+                    <div>
+                        <span class="eyebrow">MATCH SCHEDULING</span>
+                        <h2>Tournaments</h2>
+                        <p>Create and control matches across 1v1 Matches and Battle Royale (Solo, Duo, Squad).</p>
+                    </div>
+                </div>
+                <div class="admin-panel" style="margin-bottom:20px;">
+                    <span class="eyebrow">NEW MATCH</span>
+                    <h2>Create Match</h2>
+                    <div class="form-grid">
+                        <label>Name *<input id="tName" placeholder="e.g. Free Fire 1v1 Clash #1"></label>
+                        <label>Game<input id="tGame" value="Free Fire"></label>
+                        <label>Mode<select id="tMode"><option value="1v1">1v1 Match</option><option value="Solo BR">Solo BR</option><option value="Duo BR">Duo BR</option><option value="Squad BR">Squad BR</option></select></label>
+                        <label>Map<input id="tMap" placeholder="e.g. Bermuda, Purgatory, Kalahari" value="Bermuda"></label>
+                        <label>Entry Fee (₹)<input id="tEntry" type="number" value="50" min="0"></label>
+                        <label>Total Prize Pool (₹)<input id="tPrize" type="number" value="500" min="0"></label>
+                        <label>Per Kill Reward (₹)<input id="tPerKill" type="number" value="5" min="0"></label>
+                        <label>Total Player Slots<input id="tSlots" type="number" value="48" min="2"></label>
+                        <label>Start Date & Time<input id="tStart" type="datetime-local"></label>
+                        <label>Status<select id="tStatus"><option value="upcoming">Upcoming</option><option value="registration_open">Registration Open</option><option value="live">Live</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option></select></label>
+                        <label>Room ID<input id="tRoom" placeholder="Room ID"></label>
+                        <label>Room Password<input id="tPass" placeholder="Room Password"></label>
+                        <label class="check"><input id="tRelease" type="checkbox"> Release room details immediately to registered players</label>
+                        <label style="grid-column:1/-1;">Rules / Description<textarea id="tDesc" rows="2" placeholder="Match rules..."></textarea></label>
+                        <button id="createTournament" class="btn btn-primary">CREATE TOURNAMENT</button>
+                    </div>
+                </div>
+                <div class="admin-panel table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Tournament</th>
+                                <th>Mode</th>
+                                <th>Entry</th>
+                                <th>Prize</th>
+                                <th>Slots</th>
+                                <th>Start Time</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tournamentsTable">
+                            <tr><td colspan="8">Loading tournaments...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- 4. MATCHES & ROOMS -->
+            <section id="section-matches" class="admin-section hidden">
+                <div class="section-toolbar">
+                    <div>
+                        <span class="eyebrow">ROOM CREDENTIALS</span>
+                        <h2>Match & Room Control</h2>
+                        <p>Enter and release Room ID & Password to registered participants.</p>
+                    </div>
+                </div>
+                <div class="admin-panel table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Match</th>
+                                <th>Mode</th>
+                                <th>Start Time</th>
+                                <th>Room ID</th>
+                                <th>Password</th>
+                                <th>Released</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="matchesTable">
+                            <tr><td colspan="7">Loading match rooms...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- 5. BR RESULTS MANAGEMENT (Complete Dynamic Calculation System) -->
+            <section id="section-br_results" class="admin-section hidden">
+                <div class="section-toolbar">
+                    <div>
+                        <span class="eyebrow">BATTLE ROYALE</span>
+                        <h2>BR Results Management</h2>
+                        <p>Automatic reward calculation: Kill Reward (Kills × Rate) + Position Reward.</p>
+                    </div>
+                </div>
+
+                <div class="admin-panel" style="margin-bottom:20px;">
+                    <span class="eyebrow">CONFIGURATION</span>
+                    <h2>Select Tournament & Configure Rewards</h2>
+                    <div class="form-grid">
+                        <label>
+                            Select BR Tournament *
+                            <select id="brTournamentSelect">
+                                <option value="">Select Tournament...</option>
+                            </select>
+                        </label>
+                        <label>
+                            Configured Kill Reward (₹ per Kill) *
+                            <input id="brKillRateInput" type="number" value="10" min="0" step="1">
+                        </label>
+                    </div>
+
+                    <div style="margin-top:16px;">
+                        <strong>Position Rewards Setup:</strong>
+                        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:10px; margin-top:8px;">
+                            <label>1st Place (₹)<input id="pos1Reward" type="number" value="40"></label>
+                            <label>2nd Place (₹)<input id="pos2Reward" type="number" value="25"></label>
+                            <label>3rd Place (₹)<input id="pos3Reward" type="number" value="15"></label>
+                            <label>4th Place (₹)<input id="pos4Reward" type="number" value="10"></label>
+                            <label>5th Place (₹)<input id="pos5Reward" type="number" value="10"></label>
+                            <label>6th Place (₹)<input id="pos6Reward" type="number" value="10"></label>
+                            <label>7th Place (₹)<input id="pos7Reward" type="number" value="10"></label>
+                            <label>8th Place (₹)<input id="pos8Reward" type="number" value="10"></label>
+                            <label>9th Place (₹)<input id="pos9Reward" type="number" value="10"></label>
+                            <label>10th Place (₹)<input id="pos10Reward" type="number" value="5"></label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Add Player Entry -->
+                <div class="admin-panel" style="margin-bottom:20px;">
+                    <span class="eyebrow">ENTRY MATRIX</span>
+                    <h2>Add Player Result Row</h2>
+                    <div class="form-grid">
+                        <label>Player UID *<input id="brPlayerUid" placeholder="Firebase UID"></label>
+                        <label>In-Game Name (IGN) *<input id="brPlayerIgn" placeholder="Free Fire / BGMI IGN"></label>
+                        <label>Team Name<input id="brPlayerTeam" placeholder="e.g. Alpha Squad"></label>
+                        <label>Position / Rank *<input id="brPlayerPos" type="number" value="1" min="1"></label>
+                        <label>Verified Kills *<input id="brPlayerKills" type="number" value="0" min="0"></label>
+                        <div style="display:flex; align-items:flex-end;">
+                            <button id="addBrPlayerBtn" class="btn btn-secondary full">Add to Table +</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Live Calculated Results Table -->
+                <div class="admin-panel table-wrapper">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+                        <span class="eyebrow">DYNAMIC CALCULATION PREVIEW</span>
+                        <div style="display:flex; gap:10px;">
+                            <button id="saveBrDraftBtn" class="btn btn-sm btn-secondary">Save Draft</button>
+                            <button id="finalizeBrResultsBtn" class="btn btn-sm btn-primary">🏆 Finalize & Credit Prizes</button>
+                        </div>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Pos</th>
+                                <th>Player IGN</th>
+                                <th>UID</th>
+                                <th>Team</th>
+                                <th>Kills</th>
+                                <th>Kill Reward</th>
+                                <th>Pos Reward</th>
+                                <th>Total Reward</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="brResultsTable">
+                            <tr><td colspan="9">Select a tournament above to begin result entry.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- 6. 1v1 MATCH MANAGEMENT (Direct Head-to-Head Duels) -->
+            <section id="section-1v1_matches" class="admin-section hidden">
+                <div class="section-toolbar">
+                    <div>
+                        <span class="eyebrow">HEAD-TO-HEAD DUELS</span>
+                        <h2>1v1 Match Management</h2>
+                        <p>Direct 1v1 matches (Player 1 vs Player 2) — Enter room details, declare the winner, and credit prize directly.</p>
+                    </div>
+                </div>
+
+                <div class="admin-panel" style="margin-bottom:20px;">
+                    <span class="eyebrow">SELECT MATCH</span>
+                    <h2>Choose 1v1 Match</h2>
+                    <div class="form-grid">
+                        <label style="grid-column:1/-1;">
+                            Select 1v1 Match *
+                            <select id="oneVoneMatchSelect">
+                                <option value="">Choose 1v1 Match...</option>
+                            </select>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- 1v1 Match Arena Card -->
+                <div id="oneVoneArena" class="admin-panel hidden">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:18px;">
+                        <div>
+                            <span class="eyebrow" id="oneVoneGameHeader">1v1 DUEL</span>
+                            <h2 id="oneVoneTitle" style="margin:4px 0;">Match Name</h2>
+                            <p id="oneVoneDetails" style="color:var(--muted); margin:0;">Entry Fee: ₹50 • Prize Pool: ₹90</p>
+                        </div>
+                        <span id="oneVoneStatusBadge" class="status active">LIVE</span>
+                    </div>
+
+                    <!-- Room Credentials Quick Box -->
+                    <div style="background:#090a0f; border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:20px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+                        <span style="font-size:12px; color:var(--muted);">Room Credentials:</span>
+                        <input id="oneVoneRoomId" placeholder="Room ID" style="max-width:140px; padding:6px 10px;">
+                        <input id="oneVoneRoomPass" placeholder="Room Password" style="max-width:140px; padding:6px 10px;">
+                        <label class="check" style="font-size:12px;"><input id="oneVoneRoomReleased" type="checkbox"> Release to Players</label>
+                        <button id="oneVoneSaveRoomBtn" class="btn btn-sm btn-secondary">Update Room</button>
+                    </div>
+
+                    <!-- 1v1 Head-to-Head Matchup -->
+                    <div style="display:grid; grid-template-columns:1fr auto 1fr; gap:20px; align-items:center; margin:24px 0;">
+                        <!-- Player 1 Card -->
+                        <div id="player1Card" style="background:#0c0e15; border:2px solid var(--line); border-radius:16px; padding:20px; text-align:center;">
+                            <span class="eyebrow" style="color:var(--blue);">PLAYER 1</span>
+                            <h3 id="p1Name" style="margin:8px 0; font-size:18px;">Waiting for Player 1...</h3>
+                            <div id="p1Uid" style="font-size:11px; color:var(--muted); font-family:monospace; margin-bottom:14px;">—</div>
+                            <button id="declareP1WinnerBtn" class="btn btn-primary full" disabled>👑 Declare Player 1 Winner</button>
+                        </div>
+
+                        <!-- VS Badge -->
+                        <div style="font-size:26px; font-weight:900; color:var(--gold); text-align:center;">
+                            VS
+                        </div>
+
+                        <!-- Player 2 Card -->
+                        <div id="player2Card" style="background:#0c0e15; border:2px solid var(--line); border-radius:16px; padding:20px; text-align:center;">
+                            <span class="eyebrow" style="color:var(--red);">PLAYER 2</span>
+                            <h3 id="p2Name" style="margin:8px 0; font-size:18px;">Waiting for Player 2...</h3>
+                            <div id="p2Uid" style="font-size:11px; color:var(--muted); font-family:monospace; margin-bottom:14px;">—</div>
+                            <button id="declareP2WinnerBtn" class="btn btn-primary full" disabled>👑 Declare Player 2 Winner</button>
+                        </div>
+                    </div>
+
+                    <!-- Winner Announcement Banner (if already completed) -->
+                    <div id="oneVoneWinnerBanner" class="hidden" style="background:rgba(21,148,71,0.15); border:1px solid var(--green); border-radius:14px; padding:16px; text-align:center; margin-top:20px;">
+                        <span style="font-size:28px;">👑</span>
+                        <h3 id="oneVoneWinnerText" style="color:var(--green); margin:6px 0;">Winner Declared!</h3>
+                        <p id="oneVoneWinnerSub" style="color:var(--muted); margin:0;">Prize has been credited to player wallet.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 7. RESULTS ARCHIVE -->
+            <section id="section-results" class="admin-section hidden">
+                <div class="section-toolbar">
+                    <div>
+                        <span class="eyebrow">PUBLISHED ARCHIVE & HISTORICAL MATCH DATA</span>
+                        <h2>Complete Match History Archive</h2>
+                        <p>Every match played—even 1 month or 1 year ago—with player scores, kills, room credentials, and winner details.</p>
+                    </div>
+                </div>
+
+                <div class="admin-panel" style="margin-bottom:16px;">
+                    <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center;">
+                        <input id="resultsSearchInput" type="text" placeholder="Search by tournament name or map..." style="flex:1; min-width:220px;">
+                        <select id="resultsTimeFilter" style="max-width:200px;">
+                            <option value="all">Time: All Time (Full History)</option>
+                            <option value="30d">Last 30 Days (Past Month)</option>
+                            <option value="7d">Last 7 Days</option>
+                            <option value="older">Older than 30 Days</option>
+                        </select>
+                        <select id="resultsGameFilter" style="max-width:180px;">
+                            <option value="all">Game: All Games</option>
+                            <option value="free_fire">Free Fire</option>
+                            <option value="bgmi">BGMI</option>
+                        </select>
+                        <button id="refreshResultsArchiveBtn" class="btn btn-sm btn-secondary">↻ Refresh Archive</button>
+                    </div>
+                </div>
+
+                <div class="admin-panel table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Match & ID</th>
+                                <th>Game & Mode</th>
+                                <th>Date Played</th>
+                                <th>Room ID / Pass</th>
+                                <th>Winner / Top 3</th>
+                                <th>Prize Distributed</th>
+                                <th>Full Details</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resultsArchiveTable">
+                            <tr><td colspan="7">Loading full match history archive...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- 8. DEPOSITS -->
+            <section id="section-deposits" class="admin-section hidden">
+                <div class="section-toolbar">
+                    <div>
+                        <span class="eyebrow">INCOMING PAYMENTS</span>
+                        <h2>Deposits Review</h2>
+                        <p>Verify manual deposits and monitor automated Razorpay settlements.</p>
+                    </div>
+                </div>
+                <div class="admin-panel table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>User UID</th>
+                                <th>Amount</th>
+                                <th>Method</th>
+                                <th>Payment ID / Order ID</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="depositsTable">
+                            <tr><td colspan="7">Loading deposit requests...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- 9. WITHDRAWALS -->
+            <section id="section-withdrawals" class="admin-section hidden">
+                <div class="section-toolbar">
+                    <div>
+                        <span class="eyebrow">OUTGOING PAYOUTS</span>
+                        <h2>Withdrawal Requests</h2>
+                        <p>Approve, dispatch, or reject pending player payout requests.</p>
+                    </div>
+                </div>
+                <div class="admin-panel table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>User UID</th>
+                                <th>Amount</th>
+                                <th>Method</th>
+                                <th>Payout Details</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="withdrawalsTable">
+                            <tr><td colspan="7">Loading withdrawal requests...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- 10. WALLETS AUDIT -->
+            <section id="section-wallets" class="admin-section hidden">
+                <div class="section-toolbar">
+                    <div>
+                        <span class="eyebrow">FINANCIAL LEDGER</span>
+                        <h2>Wallets Audit</h2>
+                    </div>
+                </div>
+                <div class="admin-panel table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>User UID</th>
+                                <th>Balance</th>
+                                <th>Locked Balance</th>
+                                <th>Total Deposited</th>
+                                <th>Total Withdrawn</th>
+                                <th>Total Won</th>
+                            </tr>
+                        </thead>
+                        <tbody id="walletsTable">
+                            <tr><td colspan="6">Loading wallet records...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- 11. NOTIFICATIONS MANAGER -->
+            <section id="section-notifications" class="admin-section hidden">
+                <div class="section-toolbar">
+                    <div>
+                        <span class="eyebrow">BROADCAST & ALERTS</span>
+                        <h2>Send Notifications</h2>
+                    </div>
+                </div>
+                <div class="admin-panel" style="max-width:680px;">
+                    <div class="form-grid">
+                        <label style="grid-column:1/-1;">
+                            Recipient
+                            <select id="notifTargetType">
+                                <option value="ALL">All Players (Global Broadcast)</option>
+                                <option value="SINGLE">Single Player UID</option>
+                            </select>
+                        </label>
+                        <label id="notifUidField" style="grid-column:1/-1; display:none;">
+                            Target User UID
+                            <input id="notifTargetUid" placeholder="Enter player UID">
+                        </label>
+                        <label style="grid-column:1/-1;">
+                            Title *
+                            <input id="notifTitle" placeholder="e.g. Free Fire Room Details Live!">
+                        </label>
+                        <label style="grid-column:1/-1;">
+                            Message *
+                            <textarea id="notifMessage" rows="3" placeholder="Enter notification message text..."></textarea>
+                        </label>
+                        <button id="sendNotificationBtn" class="btn btn-primary">DISPATCH NOTIFICATION</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 12. SUPPORT INBOX -->
+            <section id="section-support" class="admin-section hidden">
+                <div class="section-toolbar">
+                    <div>
+                        <span class="eyebrow">HELPDESK</span>
+                        <h2>Support Tickets Inbox</h2>
+                    </div>
+                </div>
+                <div class="admin-panel table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Player</th>
+                                <th>Category</th>
+                                <th>Subject</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="supportTicketsTable">
+                            <tr><td colspan="6">Loading tickets...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- 13. HERO BANNERS -->
+            <section id="section-banners" class="admin-section hidden">
+                <div class="section-toolbar">
+                    <div>
+                        <span class="eyebrow">MARKETING CAROUSEL</span>
+                        <h2>Hero Banners</h2>
+                    </div>
+                </div>
+                <div class="admin-panel" style="margin-bottom:20px; max-width:680px;">
+                    <span class="eyebrow">ADD BANNER</span>
+                    <h2>Upload New Slide</h2>
+                    <div class="form-grid">
+                        <label>Title<input id="bannerTitle" placeholder="Banner Heading"></label>
+                        <label>Subtitle<input id="bannerSubtitle" placeholder="Subtitle description"></label>
+                        <label style="grid-column:1/-1;">Image URL *<input id="bannerImgUrl" placeholder="https://..."></label>
+                        <button id="createBannerBtn" class="btn btn-primary">CREATE BANNER SLIDE</button>
+                    </div>
+                </div>
+                <div id="bannersGrid" class="banner-admin-grid"></div>
+            </section>
+
+            <!-- 14. FAQS -->
+            <section id="section-faqs" class="admin-section hidden">
+                <div class="section-toolbar">
+                    <div>
+                        <span class="eyebrow">KNOWLEDGE BASE</span>
+                        <h2>Manage FAQs</h2>
+                    </div>
+                </div>
+                <div class="admin-panel" style="max-width:680px; margin-bottom:20px;">
+                    <div class="form-grid">
+                        <label style="grid-column:1/-1;">Question *<input id="faqQuestion" placeholder="e.g. How do I join a match?"></label>
+                        <label style="grid-column:1/-1;">Answer *<textarea id="faqAnswer" rows="3" placeholder="Answer details..."></textarea></label>
+                        <button id="addFaqBtn" class="btn btn-primary">ADD FAQ ITEM</button>
+                    </div>
+                </div>
+                <div id="adminFaqList" class="activity"></div>
+            </section>
+
+            <!-- 15. PAYMENT SETTINGS -->
+            <section id="section-payments" class="admin-section hidden">
+                <div class="section-toolbar">
+                    <div>
+                        <span class="eyebrow">GATEWAY CONFIGURATION</span>
+                        <h2>Payment Settings</h2>
+                    </div>
+                </div>
+                <div class="admin-panel settings-panel">
+                    <div class="notice">
+                        Razorpay Live Key ID: <code>rzp_live_TbxTWY1CD6udie</code> (Configured in system)
+                    </div>
+                    <label>
+                        Admin UPI ID (for manual deposit fallback)
+                        <input id="payUpiId" placeholder="e.g. pay@okaxis">
+                    </label>
+                    <label>
+                        UPI QR Code Image URL
+                        <input id="payQrUrl" placeholder="https://...">
+                    </label>
+                    <label>
+                        Minimum Withdrawal (₹)
+                        <input id="payMinWithdraw" type="number" value="50">
+                    </label>
+                    <button id="savePaymentSettingsBtn" class="btn btn-primary" style="margin-top:10px;">Save Payment Settings</button>
+                </div>
+            </section>
+
+            <!-- 16. APP SETTINGS -->
+            <section id="section-appsettings" class="admin-section hidden">
+                <div class="section-toolbar">
+                    <div>
+                        <span class="eyebrow">GLOBAL APP CONFIG</span>
+                        <h2>App Settings</h2>
+                    </div>
+                </div>
+                <div class="admin-panel settings-panel">
+                    <label class="check">
+                        <input id="settingMaintenance" type="checkbox"> Maintenance Mode (Block registrations and match joins)
+                    </label>
+                    <label>
+                        Global Announcement Banner Text
+                        <input id="settingAnnouncement" placeholder="Announcement shown on player dashboard">
+                    </label>
+                    <label>
+                        Current App Version
+                        <input id="settingVersion" value="1.0.0">
+                    </label>
+                    <button id="saveAppSettingsBtn" class="btn btn-primary" style="margin-top:10px;">Save App Settings</button>
+                </div>
+            </section>
+
+            <!-- 17. ADMIN STAFF -->
+            <section id="section-admin_mgmt" class="admin-section hidden">
+                <div class="section-toolbar">
+                    <div>
+                        <span class="eyebrow">ACCESS CONTROL</span>
+                        <h2>Admin Staff Management</h2>
+                    </div>
+                </div>
+                <div class="admin-panel" style="max-width:580px; margin-bottom:20px;">
+                    <div class="form-grid">
+                        <label style="grid-column:1/-1;">
+                            Staff Firebase UID *
+                            <input id="newAdminUid" placeholder="Enter Firebase User UID to authorize">
+                        </label>
+                        <button id="addAdminStaffBtn" class="btn btn-primary">Authorize Admin</button>
+                    </div>
+                </div>
+                <div class="admin-panel table-wrapper">
+                    <table>
+                        <thead><tr><th>Admin UID</th><th>Role</th><th>Active</th><th>Action</th></tr></thead>
+                        <tbody id="adminsTable"><tr><td colspan="4">Loading staff...</td></tr></tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <!-- Support Ticket Conversation Modal -->
+    <div id="adminSupportModal" class="modal-backdrop hidden">
+        <div class="user-modal" style="max-width:700px;">
+            <div class="modal-head">
+                <div>
+                    <span class="eyebrow" id="adminTicketCategory">SUPPORT TICKET</span>
+                    <h2 id="adminTicketSubject">Ticket</h2>
+                    <p id="adminTicketUser">Player: —</p>
+                </div>
+                <button class="close-btn" id="closeAdminSupportModal">✕</button>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin:12px 0;">
+                <span>Ticket Status:</span>
+                <select id="adminTicketStatusSelect" style="max-width:180px;">
+                    <option value="OPEN">OPEN</option>
+                    <option value="IN_PROGRESS">IN_PROGRESS</option>
+                    <option value="RESOLVED">RESOLVED</option>
+                    <option value="CLOSED">CLOSED</option>
+                </select>
+            </div>
+            <div id="adminTicketChatFeed" style="background:#090a0f; border:1px solid var(--line); border-radius:14px; padding:16px; max-height:360px; overflow-y:auto; display:flex; flex-direction:column; gap:10px;"></div>
+            <form id="adminReplyForm" style="display:flex; gap:10px; margin-top:12px;">
+                <input id="adminReplyInput" type="text" placeholder="Type staff response..." required style="flex:1;">
+                <button type="submit" class="btn btn-primary">Reply</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Comprehensive Match History & Scoreboard Inspector Modal -->
+    <div id="matchHistoryDetailsModal" class="modal-backdrop hidden">
+        <div class="user-modal" style="max-width:900px; max-height:90vh; overflow-y:auto;">
+            <div class="modal-head">
+                <div>
+                    <span class="eyebrow" id="histModalEyebrow">MATCH ARCHIVE INSPECTOR</span>
+                    <h2 id="histModalTitle">Match Details</h2>
+                    <p id="histModalSubtitle" style="color:var(--muted); margin:4px 0 0;">Historical match records, player statistics, and prize ledger.</p>
+                </div>
+                <button class="close-btn" id="closeHistModalBtn">✕</button>
+            </div>
+
+            <!-- Key Info Bar -->
+            <div id="histModalSpecs" class="admin-grid" style="grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:12px; margin:16px 0;"></div>
+
+            <!-- Credentials Box -->
+            <div id="histModalCredentials" style="background:#0c0e15; border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:18px;"></div>
+
+            <!-- Player Standings & Prize Breakdown -->
+            <div class="admin-panel" style="margin-bottom:16px;">
+                <span class="eyebrow">FINAL RESULTS & PRIZE DISTRIBUTION</span>
+                <h3 style="margin:4px 0 14px;">Official Standings & Scorecard</h3>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Place</th>
+                                <th>Player IGN</th>
+                                <th>Team</th>
+                                <th>Kills</th>
+                                <th>Kill Prize</th>
+                                <th>Rank Prize</th>
+                                <th>Total Won</th>
+                                <th>Player UID</th>
+                            </tr>
+                        </thead>
+                        <tbody id="histModalResultsTable">
+                            <tr><td colspan="8">Loading results...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Joined Roster Archive -->
+            <div class="admin-panel" style="margin-bottom:16px;">
+                <span class="eyebrow">PARTICIPANTS ROSTER</span>
+                <h3 style="margin:4px 0 14px;">All Registered Players</h3>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>IGN</th>
+                                <th>Team Name</th>
+                                <th>Joined Date</th>
+                                <th>UID</th>
+                            </tr>
+                        </thead>
+                        <tbody id="histModalRosterTable">
+                            <tr><td colspan="4">Loading roster...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast"></div>
+
+    <script type="module" src="js/admin.js"></script>
+    <script type="module" src="js/admin-users.js"></script>
+</body>
+</html>
