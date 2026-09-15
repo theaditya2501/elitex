@@ -186,8 +186,13 @@ export async function renderHome() {
                 <span class="eyebrow">ELITEXGAMERS • BATTLE ROYALE & 1V1 MATCHES</span>
                 <h1>Play. <span>Compete.</span> Win.</h1>
                 <p>India's competitive esports platform for Free Fire & BGMI. Enter verified tournaments, climb the leaderboards, and withdraw instant cash prizes.</p>
-                <div class="hero-btns" style="display:flex; gap:12px; margin-top:24px; flex-wrap:wrap;">
+                <div class="hero-btns" style="display:flex; gap:12px; margin-top:24px; flex-wrap:wrap; align-items:center;">
                     <a class="btn btn-primary" href="#/tournaments">Explore Tournaments</a>
+                    <a class="btn btn-secondary" href="downloads/elitexgamers.apk" download="EliteXGamers.apk" style="display:inline-flex; align-items:center; gap:8px; border-color:var(--gold); color:#fff; font-weight:700;">
+                        <span style="font-size:16px;">📱</span>
+                        <span>Download App (APK)</span>
+                        <span class="pill" style="border-color:var(--green); color:var(--green); font-size:10px; padding:2px 8px;">26 MB</span>
+                    </a>
                     <a class="btn btn-secondary" href="#/my-matches">My Matches</a>
                 </div>
                 <div class="dots" id="heroDots"></div>
@@ -304,6 +309,44 @@ export async function renderHome() {
                                 <strong style="color:var(--green);">💰 Instant Payout:</strong> Winner prize ₹500 credited via UPI!
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Official Android App Download Section -->
+        <section class="container" style="margin-bottom:50px;">
+            <div class="app-download-banner">
+                <div class="app-download-grid">
+                    <div>
+                        <span class="eyebrow" style="color:var(--gold);">OFFICIAL MOBILE APP</span>
+                        <h2 style="font-size:clamp(26px, 4vw, 38px); margin:8px 0 14px; font-weight:900;">Play Anywhere • Download The App</h2>
+                        <p style="color:#c5c7d2; font-size:15px; line-height:1.6; margin:0 0 20px; max-width:540px;">
+                            Experience faster matchmaking, live push notifications for Free Fire & BGMI Room ID / Password credentials, instant UPI wallet top-ups, and 1-click cashouts directly on your Android phone.
+                        </p>
+                        <div class="wa-perks" style="margin-bottom:24px;">
+                            <div class="wa-perk"><span class="wa-perk-icon">⚡</span> Instant Room ID & Password Alerts</div>
+                            <div class="wa-perk"><span class="wa-perk-icon">🛡</span> Mobile-Only Anti-Cheat Tournaments</div>
+                            <div class="wa-perk"><span class="wa-perk-icon">💸</span> 1-Click UPI & Razorpay Deposits</div>
+                            <div class="wa-perk"><span class="wa-perk-icon">👑</span> Instant Prize Winnings Direct to Bank</div>
+                        </div>
+                        <div style="display:flex; gap:14px; flex-wrap:wrap; align-items:center;">
+                            <a href="downloads/elitexgamers.apk" download="EliteXGamers.apk" class="btn btn-primary" style="padding:15px 32px; font-size:16px; font-weight:800; border-radius:14px; box-shadow:0 12px 35px rgba(233,30,43,0.5);">
+                                <span>⬇ DOWNLOAD OFFICIAL APK (26 MB)</span>
+                            </a>
+                            <span style="font-size:12px; color:var(--muted);">Requires Android 8.0 or higher • Free & Safe</span>
+                        </div>
+                    </div>
+                    <div class="app-download-preview">
+                        <img src="assets/logo.png" alt="Elite X Gamers Official Logo" class="app-download-logo">
+                        <h3 style="margin:0 0 6px; font-size:20px;">Elite X Gamers</h3>
+                        <span class="pill" style="border-color:var(--green); color:var(--green); font-size:11px;">v1.0.0 • PRODUCTION READY</span>
+                        <p style="color:var(--muted); font-size:12px; margin:12px 0 16px; line-height:1.5;">
+                            Direct installation package verified for Android devices. No Play Store required.
+                        </p>
+                        <a href="downloads/elitexgamers.apk" download="EliteXGamers.apk" class="btn btn-secondary full" style="border-color:var(--gold); color:var(--gold); font-weight:700;">
+                            📥 Direct APK Download
+                        </a>
                     </div>
                 </div>
             </div>
@@ -1422,77 +1465,163 @@ export function renderWallet() {
     const bal = state.wallet.balance || 0;
     const locked = state.wallet.lockedBalance || 0;
     const avail = Math.max(0, bal - locked);
+    const winnings = state.userProfile?.totalWinning || state.userProfile?.totalEarnings || state.wallet.totalWinning || 0;
 
     app.innerHTML = `
         <div class="container section">
-            <div class="section-head">
+            <div class="section-head" style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px;">
                 <div>
-                    <span class="eyebrow">FINANCIAL CENTER</span>
+                    <span class="eyebrow">ACCOUNT WALLET DETAILS</span>
                     <h2>My Wallet</h2>
-                    <p style="color:var(--muted); margin:4px 0 0;">Deposit funds via Razorpay/UPI and withdraw your tournament winnings.</p>
+                    <p style="color:var(--muted); margin:4px 0 0;">Comprehensive audit of your available credits, locked payouts, and tournament winnings.</p>
                 </div>
-                <div style="display:flex; gap:10px;">
-                    <a href="#/deposit" class="btn btn-primary">Deposit Cash +</a>
-                    <a href="#/withdraw" class="btn btn-secondary">Withdraw Funds ↙</a>
+                <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                    <a href="#/deposit" class="btn btn-primary" style="font-weight:700;">Deposit Funds (Add Money) +</a>
+                    <a href="#/withdraw" class="btn btn-secondary" style="font-weight:700;">Withdraw Funds ↙</a>
+                    <a href="#/transactions" class="btn btn-secondary">All Transactions ↕</a>
                 </div>
             </div>
 
-            <!-- Balances Breakdown -->
-            <div class="admin-stats">
+            <!-- Balances Breakdown (Wallet Details Only) -->
+            <div class="admin-stats" style="grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));">
                 <div class="admin-stat">
                     <span>Available Balance</span>
-                    <strong style="color:var(--green)">${money(avail)}</strong>
-                    <small>Ready for match entries</small>
+                    <strong style="color:var(--green); font-size:26px;">${money(avail)}</strong>
+                    <small style="color:var(--muted);">Ready for tournament entries</small>
                 </div>
                 <div class="admin-stat">
                     <span>Locked Balance</span>
-                    <strong style="color:var(--muted)">${money(locked)}</strong>
-                    <small>Pending payout verification</small>
+                    <strong style="color:var(--gold); font-size:26px;">${money(locked)}</strong>
+                    <small style="color:var(--muted);">Pending cashout verification</small>
+                </div>
+                <div class="admin-stat">
+                    <span>Total Winnings</span>
+                    <strong style="color:var(--blue); font-size:26px;">${money(winnings)}</strong>
+                    <small style="color:var(--muted);">Lifetime tournament rewards</small>
                 </div>
                 <div class="admin-stat">
                     <span>Total Deposited</span>
-                    <strong>${money(state.wallet.totalDeposited || 0)}</strong>
-                    <small>Lifetime credits</small>
+                    <strong style="font-size:26px;">${money(state.wallet.totalDeposited || 0)}</strong>
+                    <small style="color:var(--muted);">Lifetime credits added</small>
                 </div>
                 <div class="admin-stat">
                     <span>Total Withdrawn</span>
-                    <strong>${money(state.wallet.totalWithdrawn || 0)}</strong>
-                    <small>Lifetime payouts</small>
+                    <strong style="font-size:26px;">${money(state.wallet.totalWithdrawn || 0)}</strong>
+                    <small style="color:var(--muted);">Lifetime payouts paid</small>
                 </div>
             </div>
 
-            <!-- Quick Action Cards -->
+            <!-- Forward Action Centers -->
             <div class="admin-grid" style="margin-top:24px;">
-                <div class="admin-panel">
-                    <span class="eyebrow">INSTANT ADD</span>
-                    <h2>Quick Deposit</h2>
-                    <p style="color:var(--muted);">Select a preset amount to top up your wallet with Razorpay:</p>
-                    <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; margin:16px 0;">
-                        <button class="quick-preset-btn btn btn-secondary" data-amt="50">₹50</button>
-                        <button class="quick-preset-btn btn btn-secondary" data-amt="100">₹100</button>
-                        <button class="quick-preset-btn btn btn-secondary" data-amt="200">₹200</button>
-                        <button class="quick-preset-btn btn btn-secondary" data-amt="500">₹500</button>
-                        <button class="quick-preset-btn btn btn-secondary" data-amt="1000">₹1,000</button>
-                        <a href="#/deposit" class="btn btn-primary" style="display:grid; place-items:center;">Custom</a>
+                <div class="admin-panel" style="display:flex; flex-direction:column; justify-content:space-between;">
+                    <div>
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span class="eyebrow" style="color:var(--green);">PAYMENT GATEWAY URL</span>
+                            <span class="pill" style="border-color:var(--green); color:var(--green);">FAST & SECURE</span>
+                        </div>
+                        <h2 style="margin-top:6px;">Deposit Funds</h2>
+                        <p style="color:var(--muted); line-height:1.6;">
+                            Top up your wallet balance instantly via Razorpay, Google Pay, PhonePe, Paytm, or UPI QR code. Funds are credited immediately to join upcoming matches.
+                        </p>
+                    </div>
+                    <div style="margin-top:20px;">
+                        <a href="#/deposit" class="btn btn-primary full" style="font-weight:700; text-align:center;">Forward to Deposit Processing Page ↗</a>
                     </div>
                 </div>
 
-                <div class="admin-panel">
-                    <span class="eyebrow">CASH OUT</span>
-                    <h2>Fast Payouts</h2>
-                    <p style="color:var(--muted);">Transfer your winnings directly to your UPI ID or Bank account. Minimum withdrawal is ₹50.</p>
-                    <div style="margin-top:24px;">
-                        <a href="#/withdraw" class="btn btn-secondary full">Request Payout ↙</a>
-                        <a href="#/transactions" class="btn btn-secondary full" style="margin-top:10px;">View Transaction History ↕</a>
+                <div class="admin-panel" style="display:flex; flex-direction:column; justify-content:space-between;">
+                    <div>
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span class="eyebrow" style="color:var(--gold);">DIRECT CASHOUT URL</span>
+                            <span class="pill" style="border-color:var(--gold); color:var(--gold);">MIN ₹50</span>
+                        </div>
+                        <h2 style="margin-top:6px;">Withdraw Funds</h2>
+                        <p style="color:var(--muted); line-height:1.6;">
+                            Transfer your tournament cash prizes directly to your UPI ID or Bank account (IMPS). Payouts are verified by administrators within minutes.
+                        </p>
                     </div>
+                    <div style="margin-top:20px;">
+                        <a href="#/withdraw" class="btn btn-secondary full" style="font-weight:700; text-align:center;">Forward to Withdrawal Processing Page ↗</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Wallet Activity Audit -->
+            <div class="admin-panel" style="margin-top:24px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:8px;">
+                    <div>
+                        <span class="eyebrow">AUDIT TRAIL</span>
+                        <h3 style="margin:4px 0 0;">Recent Wallet Transactions</h3>
+                    </div>
+                    <a href="#/transactions" class="btn btn-sm btn-secondary">View Full History ↗</a>
+                </div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date & Time</th>
+                                <th>Description</th>
+                                <th>Type</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="walletQuickTxTable">
+                            <tr><td colspan="5" style="text-align:center; padding:18px; color:var(--muted);">Loading transaction ledger...</td></tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
     `;
 
-    document.querySelectorAll(".quick-preset-btn").forEach(b => {
-        b.onclick = () => initiateRazorpayDeposit(Number(b.dataset.amt));
-    });
+    // Load recent 10 transactions for this wallet
+    loadWalletOverviewLedger();
+}
+
+async function loadWalletOverviewLedger() {
+    const tbody = $("walletQuickTxTable");
+    if (!tbody || !state.currentUser) return;
+
+    try {
+        const uid = state.currentUser.uid;
+        const q = query(
+            collection(db, "walletTransactions"),
+            where("uid", "==", uid),
+            limit(10)
+        );
+        const snap = await getDocs(q);
+        const list = [];
+        snap.forEach(d => list.push({ id: d.id, ...d.data() }));
+
+        list.sort((a, b) => {
+            const ta = a.createdAt?.toMillis?.() || a.createdAt || 0;
+            const tb = b.createdAt?.toMillis?.() || b.createdAt || 0;
+            return tb - ta;
+        });
+
+        if (list.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:20px; color:var(--muted);">No transactions recorded in this wallet yet.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = list.map(tx => {
+            const isCredit = tx.type === "DEPOSIT" || tx.type === "PRIZE" || tx.type === "REFUND";
+            return `
+                <tr>
+                    <td>${formatDt(tx.createdAt)}</td>
+                    <td><strong>${esc(tx.description || tx.type)}</strong></td>
+                    <td><span class="pill">${esc(tx.type || "TRANSACTION")}</span></td>
+                    <td style="font-weight:bold; color:${isCredit ? 'var(--green)' : 'var(--red)'}">
+                        ${isCredit ? '+' : '-'}${money(tx.amount)}
+                    </td>
+                    <td><span class="status ${tx.status === 'COMPLETED' || tx.status === 'APPROVED' ? 'active' : ''}">${esc(tx.status || 'COMPLETED')}</span></td>
+                </tr>
+            `;
+        }).join("");
+    } catch (err) {
+        if (tbody) tbody.innerHTML = `<tr><td colspan="5" style="color:var(--muted); text-align:center;">Recent ledger offline. View in <a href="#/transactions">All Transactions</a>.</td></tr>`;
+    }
 }
 
 export function renderDeposit() {

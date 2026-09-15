@@ -1388,41 +1388,56 @@ async function openMatchHistoryModal(tourneyId) {
             </div>
         `;
 
-        // Load Entries / Results subcollections
-        const [entriesSnap, resultsSnap] = await Promise.all([
+        // Load final results doc, plus entries, joins, and results subcollections
+        const [finalSnap, entriesSnap, joinsSnap, resultsSnap] = await Promise.all([
+            getDoc(doc(db, "tournaments", tourneyId, "results", "final")).catch(() => ({ exists: () => false })),
             getDocs(collection(db, "tournaments", tourneyId, "entries")).catch(() => ({ docs: [] })),
+            getDocs(collection(db, "tournaments", tourneyId, "joins")).catch(() => ({ docs: [] })),
             getDocs(collection(db, "tournaments", tourneyId, "results")).catch(() => ({ docs: [] }))
         ]);
 
-        const entries = [];
-        entriesSnap.forEach(d => entries.push({ id: d.id, ...d.data() }));
+        let playerScores = [];
+        if (finalSnap.exists && finalSnap.exists()) {
+            const fData = finalSnap.data() || {};
+            const rawResults = fData.results || [];
+            playerScores = rawResults.map(r => ({
+                userId: r.uid || "—",
+                ign: r.ign || r.username || "Player",
+                teamName: r.team || "—",
+                position: Number(r.position || 0),
+                kills: Number(r.kills || 0),
+                killCoins: Number(r.killReward || 0),
+                posCoins: Number(r.positionReward || 0),
+                totalPrize: Number(r.totalReward || 0)
+            }));
+        } else {
+            const entries = [];
+            entriesSnap.forEach(d => entries.push({ id: d.id, ...d.data() }));
 
-        const resultsMap = new Map();
-        resultsSnap.forEach(d => resultsMap.set(d.id, { id: d.id, ...d.data() }));
+            const resultsMap = new Map();
+            resultsSnap.forEach(d => resultsMap.set(d.id, { id: d.id, ...d.data() }));
 
-        // Merge entries and results
-        const playerScores = entries.map(e => {
-            const r = resultsMap.get(e.userId || e.id) || {};
-            const pos = Number(r.position || e.position || 0);
-            const kills = Number(r.kills || e.kills || 0);
-            const killCoins = Number(r.killCoins || e.killCoins || 0);
-            const posCoins = Number(r.positionCoins || e.positionCoins || 0);
-            const totalPrize = Number(r.prize || e.prize || (killCoins + posCoins));
-            const ign = e.iglInGameName || e.inGameName || (e.playerNames && e.playerNames[0]) || e.ign || "Player";
+            playerScores = entries.map(e => {
+                const r = resultsMap.get(e.userId || e.id) || {};
+                const pos = Number(r.position || e.position || 0);
+                const kills = Number(r.kills || e.kills || 0);
+                const killCoins = Number(r.killCoins || e.killCoins || 0);
+                const posCoins = Number(r.positionCoins || e.positionCoins || 0);
+                const totalPrize = Number(r.prize || e.prize || (killCoins + posCoins));
+                const ign = e.iglInGameName || e.inGameName || (e.playerNames && e.playerNames[0]) || e.ign || "Player";
 
-            return {
-                userId: e.userId || e.id,
-                ign: ign,
-                teamName: e.teamName || e.team || "—",
-                position: pos,
-                kills: kills,
-                killCoins: killCoins,
-                posCoins: posCoins,
-                totalPrize: totalPrize,
-                published: r.resultPublished || e.resultPublished || false,
-                joinedAt: e.joinedAt || e.createdAt
-            };
-        });
+                return {
+                    userId: e.userId || e.id,
+                    ign: ign,
+                    teamName: e.teamName || e.team || "—",
+                    position: pos,
+                    kills: kills,
+                    killCoins: killCoins,
+                    posCoins: posCoins,
+                    totalPrize: totalPrize
+                };
+            });
+        }
 
         // Sort by position (1, 2, 3...) then kills desc
         playerScores.sort((a, b) => {
@@ -1453,16 +1468,39 @@ async function openMatchHistoryModal(tourneyId) {
             }).join("");
         }
 
-        // Render Roster Table
-        if (entries.length === 0) {
+        // Build deduplicated Roster
+        const rosterMap = new Map();
+        entriesSnap.forEach(d => {
+            const data = d.data();
+            rosterMap.set(d.id, {
+                uid: data.userId || d.id,
+                ign: data.iglInGameName || data.inGameName || (data.playerNames && data.playerNames.join(", ")) || "Player",
+                team: data.teamName || data.team || "Solo",
+                joinedAt: data.joinedAt || data.createdAt
+            });
+        });
+        joinsSnap.forEach(d => {
+            if (!rosterMap.has(d.id)) {
+                const data = d.data();
+                rosterMap.set(d.id, {
+                    uid: data.userId || d.id,
+                    ign: data.iglInGameName || data.inGameName || (data.playerNames && data.playerNames.join(", ")) || "Player",
+                    team: data.teamName || data.team || "Solo",
+                    joinedAt: data.joinedAt || data.createdAt
+                });
+            }
+        });
+
+        const roster = Array.from(rosterMap.values());
+        if (roster.length === 0) {
             $("histModalRosterTable").innerHTML = `<tr><td colspan="4" style="text-align:center; padding:18px; color:var(--muted);">No joined players.</td></tr>`;
         } else {
-            $("histModalRosterTable").innerHTML = entries.map(e => `
+            $("histModalRosterTable").innerHTML = roster.map(e => `
                 <tr>
-                    <td><strong>${esc(e.iglInGameName || e.inGameName || (e.playerNames && e.playerNames.join(", ")) || "Player")}</strong></td>
-                    <td><span class="pill">${esc(e.teamName || e.team || "Solo")}</span></td>
-                    <td>${formatDt(e.joinedAt || e.createdAt)}</td>
-                    <td><code style="font-size:11px;">${esc(e.userId || e.id)}</code></td>
+                    <td><strong>${esc(e.ign)}</strong></td>
+                    <td><span class="pill">${esc(e.team)}</span></td>
+                    <td>${formatDt(e.joinedAt)}</td>
+                    <td><code style="font-size:11px;">${esc(e.uid)}</code></td>
                 </tr>
             `).join("");
         }
@@ -2250,18 +2288,23 @@ async function loadAppSettings() {
         if ($("settingAnnouncement")) $("settingAnnouncement").value = d.announcement || "";
         if ($("settingVersion")) $("settingVersion").value = d.version || "1.0.0";
         if ($("settingWhatsappLink")) $("settingWhatsappLink").value = d.whatsappLink || "https://chat.whatsapp.com/F3m1XBWHgFu7iKHVodNGBD?s=sh&p=a&mlu=4&ilr=4";
+        if ($("settingApkDownloadUrl")) $("settingApkDownloadUrl").value = d.apkDownloadUrl || "downloads/elitexgamers.apk";
+        if ($("testApkLinkBtn")) $("testApkLinkBtn").href = d.apkDownloadUrl || "downloads/elitexgamers.apk";
     }
 }
 
 $("saveAppSettingsBtn")?.addEventListener("click", async () => {
     const waLink = $("settingWhatsappLink")?.value.trim() || "https://chat.whatsapp.com/F3m1XBWHgFu7iKHVodNGBD?s=sh&p=a&mlu=4&ilr=4";
+    const apkUrl = $("settingApkDownloadUrl")?.value.trim() || "downloads/elitexgamers.apk";
     await setDoc(doc(db, "appSettings", "config"), {
         maintenance: $("settingMaintenance").checked,
         announcement: $("settingAnnouncement").value.trim(),
         version: $("settingVersion").value.trim(),
         whatsappLink: waLink,
+        apkDownloadUrl: apkUrl,
         updatedAt: serverTimestamp()
     }, { merge: true });
+    if ($("testApkLinkBtn")) $("testApkLinkBtn").href = apkUrl;
     toast("App settings saved.");
 });
 
@@ -2309,272 +2352,4 @@ $("addAdminStaffBtn")?.addEventListener("click", async () => {
     toast("Admin access granted!");
     $("newAdminUid").value = "";
     loadAdminsList();
-});
-
-// =========================================================
-// 17. COMPREHENSIVE MATCH HISTORY ARCHIVE & DETAILS
-// =========================================================
-let allCompletedMatchesCache = [];
-
-async function loadResultsArchive() {
-    const tbody = $("resultsArchiveTable");
-    if (!tbody) return;
-
-    try {
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;">Loading complete historical match archive...</td></tr>`;
-
-        const snap = await getDocs(collection(db, "tournaments"));
-        const completed = [];
-
-        for (const d of snap.docs) {
-            const t = { id: d.id, ...d.data() };
-            const statusLower = (t.status || "").toLowerCase();
-            if (t.resultsPublished === true || statusLower === "completed" || statusLower === "finished") {
-                // Fetch final results summary if exists
-                try {
-                    const finalSnap = await getDoc(doc(db, "tournaments", d.id, "results", "final"));
-                    if (finalSnap.exists()) {
-                        t.finalResults = finalSnap.data().results || [];
-                    }
-                } catch (_) {}
-                completed.push(t);
-            }
-        }
-
-        // Sort descending by match date (newest first, but preserving all 1 month+ history)
-        completed.sort((a, b) => {
-            const timeA = (a.startTime?.toDate ? a.startTime.toDate().getTime() : new Date(a.startTime || a.date || 0).getTime()) || 0;
-            const timeB = (b.startTime?.toDate ? b.startTime.toDate().getTime() : new Date(b.startTime || b.date || 0).getTime()) || 0;
-            return timeB - timeA;
-        });
-
-        allCompletedMatchesCache = completed;
-        renderFilteredResultsArchive();
-    } catch (e) {
-        if (tbody) tbody.innerHTML = `<tr><td colspan="7" style="color:var(--red); text-align:center;">Error loading match archive: ${esc(e.message)}</td></tr>`;
-    }
-}
-
-function renderFilteredResultsArchive() {
-    const tbody = $("resultsArchiveTable");
-    if (!tbody) return;
-
-    const searchTerm = ($("resultsSearchInput")?.value || "").toLowerCase().trim();
-    const timeFilter = $("resultsTimeFilter")?.value || "all";
-    const gameFilter = $("resultsGameFilter")?.value || "all";
-
-    const now = Date.now();
-    const DAY_MS = 24 * 60 * 60 * 1000;
-
-    const filtered = allCompletedMatchesCache.filter(t => {
-        // Search text
-        if (searchTerm) {
-            const matchText = `${t.name || ""} ${t.id} ${t.map || ""} ${t.game || ""}`.toLowerCase();
-            if (!matchText.includes(searchTerm)) return false;
-        }
-
-        // Game filter
-        if (gameFilter !== "all") {
-            const g = (t.game || "").toLowerCase().replace(/\s+/g, "_");
-            if (!g.includes(gameFilter)) return false;
-        }
-
-        // Time filter
-        const matchTime = (t.startTime?.toDate ? t.startTime.toDate().getTime() : new Date(t.startTime || t.date || 0).getTime()) || 0;
-        const diffDays = matchTime > 0 ? (now - matchTime) / DAY_MS : 999;
-
-        if (timeFilter === "7d" && diffDays > 7) return false;
-        if (timeFilter === "30d" && diffDays > 30) return false;
-        if (timeFilter === "older" && diffDays <= 30) return false;
-
-        return true;
-    });
-
-    if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:30px; color:var(--muted);">No matches found matching the selected filters. Total historical records: ${allCompletedMatchesCache.length}.</td></tr>`;
-        return;
-    }
-
-    tbody.innerHTML = filtered.map(t => {
-        const matchTime = (t.startTime?.toDate ? t.startTime.toDate().getTime() : new Date(t.startTime || t.date || 0).getTime()) || 0;
-        let relativeTimeStr = "";
-        if (matchTime > 0) {
-            const daysAgo = Math.floor((now - matchTime) / (24 * 60 * 60 * 1000));
-            relativeTimeStr = daysAgo > 0 ? ` (${daysAgo}d ago)` : " (Today)";
-        }
-
-        const topWinner = t.finalResults && t.finalResults.length > 0 ? t.finalResults[0] : null;
-        const winnerText = topWinner
-            ? `👑 <strong>${esc(topWinner.ign || topWinner.username || "Winner")}</strong> (${money(topWinner.totalReward || 0)})`
-            : `<span style="color:var(--muted);">Standings archived</span>`;
-
-        const roomId = t.roomId || "—";
-        const roomPass = t.roomPassword || "—";
-
-        return `
-            <tr>
-                <td>
-                    <strong>${esc(t.name || "Tournament")}</strong>
-                    <div style="font-size:11px; color:var(--muted); font-family:monospace;">ID: ${esc(t.id)}</div>
-                </td>
-                <td>
-                    <span class="tournament-game" style="font-size:11px;">${esc(t.game || "Free Fire")} • ${esc(t.mode || "Solo")}</span>
-                    <div style="font-size:12px; color:var(--muted); margin-top:2px;">Map: ${esc(t.map || "Bermuda")}</div>
-                </td>
-                <td>
-                    <strong>${formatDt(t.startTime || t.date)}</strong>
-                    <div style="font-size:11px; color:var(--gold);">${relativeTimeStr}</div>
-                </td>
-                <td>
-                    <div style="font-size:12px;">ID: <code>${esc(roomId)}</code></div>
-                    <div style="font-size:12px;">Pass: <code>${esc(roomPass)}</code></div>
-                </td>
-                <td>${winnerText}</td>
-                <td style="color:var(--green); font-weight:bold;">${money(t.prizePool ?? t.prize)}</td>
-                <td>
-                    <div style="display:flex; gap:6px;">
-                        <button class="btn btn-sm btn-primary" data-view-hist="${esc(t.id)}" style="font-size:11px; padding:4px 8px;">Inspect Details</button>
-                        <a href="index.html#/results/${t.id}" target="_blank" class="btn btn-sm btn-secondary" style="font-size:11px; padding:4px 8px;">Public ↗</a>
-                    </div>
-                </td>
-            </tr>
-        `;
-    }).join("");
-
-    document.querySelectorAll("[data-view-hist]").forEach(btn => {
-        btn.onclick = () => openMatchHistoryModal(btn.dataset.viewHist);
-    });
-}
-
-// Hook up search and filter inputs
-$("resultsSearchInput")?.addEventListener("input", () => renderFilteredResultsArchive());
-$("resultsTimeFilter")?.addEventListener("change", () => renderFilteredResultsArchive());
-$("resultsGameFilter")?.addEventListener("change", () => renderFilteredResultsArchive());
-$("refreshResultsArchiveBtn")?.addEventListener("click", () => loadResultsArchive());
-
-// Modal Inspector
-async function openMatchHistoryModal(tournamentId) {
-    const modal = $("matchHistoryDetailsModal");
-    if (!modal) return;
-
-    modal.classList.remove("hidden");
-    $("histModalTitle").textContent = "Loading Match Records...";
-    $("histModalSubtitle").textContent = `Querying all player scorecards and credentials for ID: ${tournamentId}`;
-    $("histModalSpecs").innerHTML = `<div class="loading">Loading details...</div>`;
-    $("histModalCredentials").innerHTML = `<div class="loading">Loading credentials...</div>`;
-    $("histModalResultsTable").innerHTML = `<tr><td colspan="8" style="text-align:center;">Loading scorecard...</td></tr>`;
-    $("histModalRosterTable").innerHTML = `<tr><td colspan="4" style="text-align:center;">Loading roster...</td></tr>`;
-
-    try {
-        const tDoc = await getDoc(doc(db, "tournaments", tournamentId));
-        if (!tDoc.exists()) {
-            $("histModalTitle").textContent = "Tournament Not Found";
-            return;
-        }
-
-        const t = { id: tDoc.id, ...tDoc.data() };
-        $("histModalTitle").textContent = t.name || "Tournament History";
-        $("histModalEyebrow").textContent = `${(t.game || "Free Fire").toUpperCase()} • ${(t.mode || "Solo").toUpperCase()} • ARCHIVE`;
-
-        const matchTime = (t.startTime?.toDate ? t.startTime.toDate().getTime() : new Date(t.startTime || t.date || 0).getTime()) || 0;
-        let relativeDays = "";
-        if (matchTime > 0) {
-            const daysAgo = Math.floor((Date.now() - matchTime) / (24 * 60 * 60 * 1000));
-            relativeDays = daysAgo > 0 ? ` (${daysAgo} days ago)` : " (Today)";
-        }
-
-        $("histModalSubtitle").textContent = `Played on ${formatDt(t.startTime || t.date)}${relativeDays} • Status: ${(t.status || 'COMPLETED').toUpperCase()}`;
-
-        // 1. Specs grid
-        $("histModalSpecs").innerHTML = `
-            <div class="admin-stat"><span>Game</span><strong>${esc(t.game || "Free Fire")}</strong></div>
-            <div class="admin-stat"><span>Mode</span><strong>${esc(t.mode || "Solo")}</strong></div>
-            <div class="admin-stat"><span>Map</span><strong>${esc(t.map || "Bermuda")}</strong></div>
-            <div class="admin-stat"><span>Entry Fee</span><strong>${money(t.entryFee || 0)}</strong></div>
-            <div class="admin-stat"><span>Prize Pool</span><strong style="color:var(--gold);">${money(t.prizePool ?? t.prize)}</strong></div>
-            <div class="admin-stat"><span>Kill Rate</span><strong>${money(t.perKillCoins ?? t.perKill ?? 10)}/kill</strong></div>
-        `;
-
-        // 2. Archived Credentials Box
-        $("histModalCredentials").innerHTML = `
-            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-                <div>
-                    <span class="eyebrow" style="color:var(--green);">ARCHIVED ROOM CREDENTIALS</span>
-                    <div style="display:flex; gap:24px; margin-top:6px;">
-                        <div><span style="font-size:12px; color:var(--muted);">Room ID:</span> <strong style="font-size:16px; color:#fff; font-family:monospace;">${esc(t.roomId || "—")}</strong></div>
-                        <div><span style="font-size:12px; color:var(--muted);">Room Password:</span> <strong style="font-size:16px; color:#fff; font-family:monospace;">${esc(t.roomPassword || "—")}</strong></div>
-                    </div>
-                </div>
-                <div style="font-size:12px; color:var(--muted);">
-                    Released: <strong>${t.roomReleased ? "YES" : "NO"}</strong>
-                </div>
-            </div>
-        `;
-
-        // 3. Results & Scoreboard
-        const finalSnap = await getDoc(doc(db, "tournaments", tournamentId, "results", "final"));
-        const results = finalSnap.exists() ? (finalSnap.data().results || []) : [];
-
-        if (results.length === 0) {
-            $("histModalResultsTable").innerHTML = `<tr><td colspan="8" style="text-align:center; padding:20px; color:var(--muted);">No official results published for this match yet.</td></tr>`;
-        } else {
-            $("histModalResultsTable").innerHTML = results.map(r => {
-                const pos = Number(r.position || 0);
-                const posBadge = pos === 1 ? '👑 #1 1st' : (pos === 2 ? '🥈 #2 2nd' : (pos === 3 ? '🥉 #3 3rd' : `#${pos}`));
-                const posColor = pos === 1 ? 'var(--gold)' : (pos === 2 ? '#c0c0c0' : (pos === 3 ? '#cd7f32' : '#fff'));
-
-                return `
-                    <tr>
-                        <td><strong style="color:${posColor};">${posBadge}</strong></td>
-                        <td><strong>${esc(r.ign || r.username || "Player")}</strong></td>
-                        <td>${esc(r.team || "—")}</td>
-                        <td><span style="color:var(--red); font-weight:bold;">${esc(r.kills || 0)}</span></td>
-                        <td>${money(r.killReward || 0)}</td>
-                        <td>${money(r.positionReward || 0)}</td>
-                        <td style="color:var(--green); font-weight:bold;">${money(r.totalReward || 0)}</td>
-                        <td><code style="font-size:10px; color:var(--muted);">${esc(r.uid || "—")}</code></td>
-                    </tr>
-                `;
-            }).join("");
-        }
-
-        // 4. Joined Roster Archive
-        const [entriesSnap, joinsSnap] = await Promise.all([
-            getDocs(collection(db, "tournaments", tournamentId, "entries")),
-            getDocs(collection(db, "tournaments", tournamentId, "joins"))
-        ]);
-
-        const rosterMap = new Map();
-        entriesSnap.forEach(d => {
-            const data = d.data();
-            rosterMap.set(d.id, { uid: data.userId || d.id, ign: data.inGameName || data.iglName || "Player", team: data.teamName || "—", joinedAt: data.joinedAt });
-        });
-        joinsSnap.forEach(d => {
-            if (!rosterMap.has(d.id)) {
-                const data = d.data();
-                rosterMap.set(d.id, { uid: data.userId || d.id, ign: data.inGameName || data.iglName || "Player", team: data.teamName || "—", joinedAt: data.joinedAt });
-            }
-        });
-
-        const roster = Array.from(rosterMap.values());
-        if (roster.length === 0) {
-            $("histModalRosterTable").innerHTML = `<tr><td colspan="4" style="text-align:center; padding:20px; color:var(--muted);">No roster records found.</td></tr>`;
-        } else {
-            $("histModalRosterTable").innerHTML = roster.map(p => `
-                <tr>
-                    <td><strong>${esc(p.ign)}</strong></td>
-                    <td>${esc(p.team)}</td>
-                    <td>${formatDt(p.joinedAt)}</td>
-                    <td><code style="font-size:11px; color:var(--muted);">${esc(p.uid)}</code></td>
-                </tr>
-            `).join("");
-        }
-    } catch (err) {
-        $("histModalTitle").textContent = "Error Loading Details";
-        $("histModalSubtitle").textContent = err.message;
-    }
-}
-
-$("closeHistModalBtn")?.addEventListener("click", () => {
-    $("matchHistoryDetailsModal")?.classList.add("hidden");
 });

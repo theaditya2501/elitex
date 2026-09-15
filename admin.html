@@ -4,15 +4,16 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Elite X Gamers — Admin Control Center</title>
+    <link rel="icon" type="image/png" href="assets/logo.png">
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body class="admin-page">
     <!-- Admin Login Screen -->
     <div id="adminLogin" class="login-wrap">
         <div class="login-box">
-            <div class="brand" style="justify-content:center; margin-bottom:12px;">
-                <span class="brand-mark">EXG</span>
-                <span>ELITE X GAMERS</span>
+            <div class="brand" style="justify-content:center; margin-bottom:14px; flex-direction:column; align-items:center;">
+                <img src="assets/logo.png" alt="Elite X Gamers Official Logo" class="admin-login-logo">
+                <span style="letter-spacing:1px; font-weight:900;">ELITE X GAMERS</span>
             </div>
             <span class="eyebrow" style="display:block; text-align:center;">ADMIN CONTROL CENTER</span>
             <h1 style="text-align:center;">Staff Sign In</h1>
@@ -23,8 +24,9 @@
                 <button type="submit" class="btn btn-primary full">Sign In to Control Center</button>
             </form>
             <p id="loginError" class="error" style="text-align:center;"></p>
-            <div style="text-align:center; margin-top:16px;">
-                <a href="index.html" style="color:var(--muted); font-size:13px;">← Return to Player Website</a>
+            <div style="text-align:center; margin-top:16px; display:flex; justify-content:center; gap:16px;">
+                <button type="button" id="quickAdminBtn" class="mini" style="background:#191b25; color:var(--gold); border:1px solid var(--gold); padding:6px 14px; border-radius:8px; cursor:pointer;">⚡ Quick Fill Admin</button>
+                <a href="index.html" style="color:var(--muted); font-size:13px; align-self:center;">← Return to Website</a>
             </div>
         </div>
     </div>
@@ -33,7 +35,7 @@
     <div id="adminDashboard" class="admin-shell hidden">
         <aside class="sidebar">
             <div class="sidebar-brand brand">
-                <span class="brand-mark">EXG</span>
+                <img src="assets/logo.png" alt="Elite X Gamers Logo" class="brand-logo-img">
                 <span>ELITE X GAMERS</span>
             </div>
             <nav>
@@ -755,6 +757,13 @@
                         <div style="display:flex; gap:8px; margin-top:4px;">
                             <input id="settingWhatsappLink" value="https://chat.whatsapp.com/F3m1XBWHgFu7iKHVodNGBD?s=sh&p=a&mlu=4&ilr=4" placeholder="https://chat.whatsapp.com/..." style="flex:1;">
                             <a href="https://chat.whatsapp.com/F3m1XBWHgFu7iKHVodNGBD?s=sh&p=a&mlu=4&ilr=4" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="white-space:nowrap; padding:8px 14px; font-size:12px;">Test Group ↗</a>
+                        </div>
+                    </label>
+                    <label>
+                        Official Android App (APK) Download URL
+                        <div style="display:flex; gap:8px; margin-top:4px;">
+                            <input id="settingApkDownloadUrl" value="downloads/elitexgamers.apk" placeholder="downloads/elitexgamers.apk or https://..." style="flex:1;">
+                            <a id="testApkLinkBtn" href="downloads/elitexgamers.apk" target="_blank" class="btn btn-secondary" style="white-space:nowrap; padding:8px 14px; font-size:12px;">Test APK ↗</a>
                         </div>
                     </label>
                     <button id="saveAppSettingsBtn" class="btn btn-primary" style="margin-top:10px;">Save App Settings</button>
