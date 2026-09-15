@@ -40,14 +40,14 @@
             </div>
             <nav>
                 <button class="side-link active" data-section="dashboard">▦ Dashboard</button>
+                <button class="side-link" data-section="deposits" style="color:var(--green); font-weight:700;">＋ Deposits <i id="depositBadge"></i></button>
+                <button class="side-link" data-section="withdrawals" style="color:var(--gold); font-weight:700;">↙ Withdrawals <i id="withdrawBadge"></i></button>
                 <button class="side-link" data-section="users">♙ Users / Players</button>
                 <button class="side-link" data-section="tournaments">🏆 Tournaments</button>
                 <button class="side-link" data-section="matches">◈ Matches & Rooms</button>
                 <button class="side-link" data-section="br_results">🪂 BR Results</button>
                 <button class="side-link" data-section="1v1_matches">⚔️ 1v1 Matches</button>
                 <button class="side-link" data-section="results">📋 Results Archive</button>
-                <button class="side-link" data-section="deposits">＋ Deposits <i id="depositBadge"></i></button>
-                <button class="side-link" data-section="withdrawals">↙ Withdrawals <i id="withdrawBadge"></i></button>
                 <button class="side-link" data-section="wallets">₹ Wallets Audit</button>
                 <button class="side-link" data-section="transactions">↕ Transactions</button>
                 <button class="side-link" data-section="notifications">🔔 Notifications</button>
@@ -111,11 +111,37 @@
                     <div>
                         <span class="eyebrow">PLAYER DIRECTORY</span>
                         <h2>User Management</h2>
-                        <p>Inspect player accounts, adjust wallet balances, and manage access.</p>
+                        <p>Inspect player accounts, adjust wallet balances, review deposits, and manage access.</p>
                     </div>
-                    <div class="user-tools">
+                    <div class="user-tools" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                        <button class="btn btn-secondary" onclick="document.querySelector('.side-link[data-section=\'deposits\']')?.click()" style="color:var(--green); font-weight:700; border-color:var(--green);">＋ Manage Deposits</button>
+                        <button class="btn btn-secondary" onclick="document.querySelector('.side-link[data-section=\'withdrawals\']')?.click()" style="color:var(--gold); font-weight:700; border-color:var(--gold);">↙ Manage Cashouts</button>
                         <input type="search" id="userSearch" placeholder="Search UID, email or username..." class="search-input">
                         <button id="refreshUsersButton" class="btn btn-secondary">Refresh</button>
+                    </div>
+                </div>
+
+                <!-- User Directory Financial & Account Metric Cards -->
+                <div class="admin-stats" style="margin-bottom:18px;">
+                    <div class="admin-stat">
+                        <span>Total Registered Players</span>
+                        <strong id="usersTotalCount">0</strong>
+                    </div>
+                    <div class="admin-stat">
+                        <span>Active Accounts</span>
+                        <strong id="usersActiveCount" style="color:var(--green);">0</strong>
+                    </div>
+                    <div class="admin-stat">
+                        <span>Total Player Wallet Balance</span>
+                        <strong id="usersWalletTotal" style="color:var(--gold);">₹0</strong>
+                    </div>
+                    <div class="admin-stat" style="cursor:pointer;" onclick="document.querySelector('.side-link[data-section=\'deposits\']')?.click()">
+                        <span>Pending Deposits</span>
+                        <strong id="statDepositsUsers" style="color:var(--green);">Review ↗</strong>
+                    </div>
+                    <div class="admin-stat" style="cursor:pointer;" onclick="document.querySelector('.side-link[data-section=\'withdrawals\']')?.click()">
+                        <span>Pending Cashouts</span>
+                        <strong id="statWithdrawalsUsers" style="color:var(--gold);">Review ↗</strong>
                     </div>
                 </div>
                 <div class="admin-panel table-wrapper">
@@ -226,6 +252,9 @@
                         <h2>BR Results Management</h2>
                         <p>Automatic reward calculation: Kill Reward (Kills × Rate) + Position Reward.</p>
                     </div>
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <img src="assets/banner_br.jpg" alt="Free Fire BR Tournament Banner" style="height:55px; border-radius:10px; border:1px solid rgba(233,30,43,.4); object-fit:cover; box-shadow:0 4px 15px rgba(0,0,0,0.5);">
+                    </div>
                 </div>
 
                 <div class="admin-panel" style="margin-bottom:20px;">
@@ -314,6 +343,9 @@
                         <span class="eyebrow">HEAD-TO-HEAD DUELS</span>
                         <h2>1v1 Match Management</h2>
                         <p>Direct 1v1 matches (Player 1 vs Player 2) — Enter room details, declare the winner, and credit prize directly.</p>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <img src="assets/banner_lonewolf.jpg" alt="1v1 Lone Wolf Banner" style="height:55px; border-radius:10px; border:1px solid rgba(138,43,226,.4); object-fit:cover; box-shadow:0 4px 15px rgba(0,0,0,0.5);">
                     </div>
                 </div>
 
@@ -726,7 +758,7 @@
                     </label>
                     <label>
                         Minimum Withdrawal (₹)
-                        <input id="payMinWithdraw" type="number" value="50">
+                        <input id="payMinWithdraw" type="number" value="20">
                     </label>
                     <button id="savePaymentSettingsBtn" class="btn btn-primary" style="margin-top:10px;">Save Payment Settings</button>
                 </div>
@@ -753,10 +785,10 @@
                         <input id="settingVersion" value="1.0.0">
                     </label>
                     <label>
-                        Official WhatsApp Community / Group Link
+                        Official WhatsApp Community Channel URL
                         <div style="display:flex; gap:8px; margin-top:4px;">
-                            <input id="settingWhatsappLink" value="https://chat.whatsapp.com/F3m1XBWHgFu7iKHVodNGBD?s=sh&p=a&mlu=4&ilr=4" placeholder="https://chat.whatsapp.com/..." style="flex:1;">
-                            <a href="https://chat.whatsapp.com/F3m1XBWHgFu7iKHVodNGBD?s=sh&p=a&mlu=4&ilr=4" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="white-space:nowrap; padding:8px 14px; font-size:12px;">Test Group ↗</a>
+                            <input id="settingWhatsappLink" value="https://whatsapp.com/channel/0029VbDg9qMAInPs1jczCc2U" placeholder="https://whatsapp.com/channel/..." style="flex:1;">
+                            <a href="https://whatsapp.com/channel/0029VbDg9qMAInPs1jczCc2U" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="white-space:nowrap; padding:8px 14px; font-size:12px;">Test Channel ↗</a>
                         </div>
                     </label>
                     <label>
@@ -960,6 +992,5 @@
     <div id="toast" class="toast"></div>
 
     <script type="module" src="js/admin.js"></script>
-    <script type="module" src="js/admin-users.js"></script>
 </body>
 </html>

@@ -217,6 +217,15 @@ async function loadUsersList() {
             cachedUsers.push({ id: d.id, ...u, wallet: wallets[d.id] || {} });
         });
 
+        // Update User Management Stat Counters
+        const activeCount = cachedUsers.filter(u => u.status !== "SUSPENDED" && u.active !== false).length;
+        const totalWalletBal = cachedUsers.reduce((sum, u) => sum + Number((u.wallet && u.wallet.balance) ?? u.walletBalance ?? 0), 0);
+        if ($("usersTotalCount")) $("usersTotalCount").textContent = cachedUsers.length;
+        if ($("usersActiveCount")) $("usersActiveCount").textContent = activeCount;
+        if ($("usersWalletTotal")) $("usersWalletTotal").textContent = money(totalWalletBal);
+        if ($("statDepositsUsers") && $("statDeposits")) $("statDepositsUsers").textContent = $("statDeposits").textContent;
+        if ($("statWithdrawalsUsers") && $("statWithdrawals")) $("statWithdrawalsUsers").textContent = $("statWithdrawals").textContent;
+
         renderUsersTable();
     } catch (e) {
         if ($("usersTable")) $("usersTable").innerHTML = `<tr><td colspan="7">Error loading users: ${esc(e.message)}</td></tr>`;
@@ -2287,14 +2296,14 @@ async function loadAppSettings() {
         if ($("settingMaintenance")) $("settingMaintenance").checked = d.maintenance === true;
         if ($("settingAnnouncement")) $("settingAnnouncement").value = d.announcement || "";
         if ($("settingVersion")) $("settingVersion").value = d.version || "1.0.0";
-        if ($("settingWhatsappLink")) $("settingWhatsappLink").value = d.whatsappLink || "https://chat.whatsapp.com/F3m1XBWHgFu7iKHVodNGBD?s=sh&p=a&mlu=4&ilr=4";
+        if ($("settingWhatsappLink")) $("settingWhatsappLink").value = d.whatsappLink || "https://whatsapp.com/channel/0029VbDg9qMAInPs1jczCc2U";
         if ($("settingApkDownloadUrl")) $("settingApkDownloadUrl").value = d.apkDownloadUrl || "downloads/elitexgamers.apk";
         if ($("testApkLinkBtn")) $("testApkLinkBtn").href = d.apkDownloadUrl || "downloads/elitexgamers.apk";
     }
 }
 
 $("saveAppSettingsBtn")?.addEventListener("click", async () => {
-    const waLink = $("settingWhatsappLink")?.value.trim() || "https://chat.whatsapp.com/F3m1XBWHgFu7iKHVodNGBD?s=sh&p=a&mlu=4&ilr=4";
+    const waLink = $("settingWhatsappLink")?.value.trim() || "https://whatsapp.com/channel/0029VbDg9qMAInPs1jczCc2U";
     const apkUrl = $("settingApkDownloadUrl")?.value.trim() || "downloads/elitexgamers.apk";
     await setDoc(doc(db, "appSettings", "config"), {
         maintenance: $("settingMaintenance").checked,

@@ -91,10 +91,12 @@ async function loadUsers() {
 
         renderUsers(allUsers);
 
-        document.getElementById("usersTotalCount").textContent = allUsers.length;
-        document.getElementById("usersActiveCount").textContent =
-            allUsers.filter(u => u.active !== false).length;
-        document.getElementById("usersWalletTotal").textContent = money(
+        const totalEl = document.getElementById("usersTotalCount");
+        if (totalEl) totalEl.textContent = allUsers.length;
+        const activeEl = document.getElementById("usersActiveCount");
+        if (activeEl) activeEl.textContent = allUsers.filter(u => u.active !== false).length;
+        const walletEl = document.getElementById("usersWalletTotal");
+        if (walletEl) walletEl.textContent = money(
             allUsers.reduce((sum, u) => sum + Number(u.walletBalance || 0), 0)
         );
     } catch (error) {

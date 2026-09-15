@@ -36,3 +36,18 @@ img.admin-login-logo, .admin-login-logo{width:90px!important;height:90px!importa
 .app-download-preview{background:#11131c;border:1px solid var(--line);border-radius:22px;padding:24px;text-align:center;box-shadow:0 20px 45px rgba(0,0,0,.6)}
 img.app-download-logo, .app-download-logo{width:90px!important;height:90px!important;max-width:90px!important;max-height:90px!important;border-radius:18px!important;object-fit:cover!important;border:2px solid var(--red-accent)!important;box-shadow:0 0 25px rgba(233,30,43,.4)!important;margin:0 auto 16px!important;display:inline-block!important;flex-shrink:0!important}
 @media(max-width:850px){.app-download-grid{grid-template-columns:1fr}}
+
+/* Tournament Card Hero Banner Styles */
+.tournament-card{padding:0 !important; overflow:hidden;}
+.tournament-card-hero{position:relative; width:100%; height:140px; overflow:hidden; background:#0a0b10;}
+.tournament-card-banner{width:100%; height:100%; object-fit:cover; display:block; transition:transform .4s ease;}
+.tournament-card:hover .tournament-card-banner{transform:scale(1.05);}
+.tournament-card-hero-overlay{position:absolute; inset:0; background:linear-gradient(180deg, rgba(0,0,0,0.2) 0%, rgba(14,16,23,0.92) 100%); pointer-events:none;}
+.tournament-card-hero .tournament-card-top{position:absolute; bottom:8px; left:14px; right:14px; z-index:2; margin:0;}
+.tournament-card-body{padding:14px 18px 18px; display:flex; flex-direction:column; flex:1;}
+.tournament-card-body h3{font-size:18px; margin:4px 0 12px;}
+
+/* Header Finance Direct Action Buttons */
+.header-deposit-btn:hover{background:#00e676 !important; transform:translateY(-1px); box-shadow:0 4px 14px rgba(0,230,118,0.4) !important;}
+.header-withdraw-btn:hover{background:rgba(255,200,87,0.15) !important; transform:translateY(-1px); box-shadow:0 4px 14px rgba(255,200,87,0.25) !important;}
+@media(max-width:900px){.header-deposit-btn, .header-withdraw-btn{display:none !important;}}

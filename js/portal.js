@@ -160,7 +160,7 @@ export async function syncGlobalAppSettings() {
         if (!snap.exists()) return;
         const d = snap.data();
         const apkUrl = d.apkDownloadUrl || "downloads/elitexgamers.apk";
-        const waLink = d.whatsappLink || "https://chat.whatsapp.com/F3m1XBWHgFu7iKHVodNGBD?s=sh&p=a&mlu=4&ilr=4";
+        const waLink = d.whatsappLink || "https://whatsapp.com/channel/0029VbDg9qMAInPs1jczCc2U";
 
         document.querySelectorAll('a[href*="elitexgamers.apk"], a[download="EliteXGamers.apk"]').forEach(el => {
             el.href = apkUrl;
@@ -173,7 +173,7 @@ export async function syncGlobalAppSettings() {
             }
         });
 
-        document.querySelectorAll('a[href*="chat.whatsapp.com"]').forEach(el => {
+        document.querySelectorAll('a[href*="whatsapp.com"]').forEach(el => {
             el.href = waLink;
         });
     } catch (_) {}
@@ -320,23 +320,44 @@ export async function renderHome() {
                     </div>
                 </div>
                 <div class="feature-grid">
-                    <article class="feature-card">
-                        <div class="feature-icon">⚔️</div>
-                        <h3>1v1 Matches</h3>
-                        <p>Direct 2-player head-to-head duel. Pure skill clash with instant winner declaration and direct prize payout upon victory.</p>
-                        <a href="#/tournaments?mode=1v1" class="btn btn-sm btn-secondary" style="margin-top:14px;">Browse 1v1 Matches</a>
+                    <article class="feature-card" style="display:flex; flex-direction:column; overflow:hidden; padding:0;">
+                        <img src="assets/banner_lonewolf.jpg" alt="1v1 Lone Wolf Free Fire" style="width:100%; height:160px; object-fit:cover; border-bottom:1px solid rgba(138,43,226,0.3);">
+                        <div style="padding:20px; flex:1; display:flex; flex-direction:column;">
+                            <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                                <span class="pill" style="border-color:var(--purple); color:var(--purple); font-size:11px;">1V1 DUELS</span>
+                                <span class="pill" style="border-color:var(--gold); color:var(--gold); font-size:11px;">WINNER TAKES ALL</span>
+                            </div>
+                            <h3 style="margin:0 0 8px; font-size:18px;">1v1 Lone Wolf Duels</h3>
+                            <p style="font-size:13px; line-height:1.5; color:var(--muted); flex:1; margin:0 0 16px;">Direct 2-player head-to-head duel. Pure skill clash with instant winner declaration and direct prize payout upon victory.</p>
+                            <a href="#/tournaments?mode=1v1" class="btn btn-sm btn-secondary full" style="border-color:var(--purple); color:#fff; font-weight:700;">Browse 1v1 Matches →</a>
+                        </div>
                     </article>
-                    <article class="feature-card">
-                        <div class="feature-icon">🪂</div>
-                        <h3>Battle Royale (BR)</h3>
-                        <p>Classic survival combat. Earn dual rewards: ₹ per Kill bonus plus guaranteed Position Rank payouts for top surviving squads.</p>
-                        <a href="#/tournaments?mode=BR" class="btn btn-sm btn-secondary" style="margin-top:14px;">Browse BR Matches</a>
+                    <article class="feature-card" style="display:flex; flex-direction:column; overflow:hidden; padding:0;">
+                        <img src="assets/banner_br.jpg" alt="Battle Royale Tournament Free Fire" style="width:100%; height:160px; object-fit:cover; border-bottom:1px solid rgba(233,30,43,0.3);">
+                        <div style="padding:20px; flex:1; display:flex; flex-direction:column;">
+                            <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                                <span class="pill" style="border-color:var(--red); color:var(--red); font-size:11px;">BATTLE ROYALE</span>
+                                <span class="pill" style="border-color:var(--green); color:var(--green); font-size:11px;">DUAL REWARDS</span>
+                            </div>
+                            <h3 style="margin:0 0 8px; font-size:18px;">Battle Royale (BR) Tournaments</h3>
+                            <p style="font-size:13px; line-height:1.5; color:var(--muted); flex:1; margin:0 0 16px;">Classic survival combat. Earn dual rewards: ₹ per Kill bonus plus guaranteed Position Rank payouts for top surviving squads.</p>
+                            <a href="#/tournaments?mode=BR" class="btn btn-sm btn-secondary full" style="border-color:var(--red); color:#fff; font-weight:700;">Browse BR Matches →</a>
+                        </div>
                     </article>
-                    <article class="feature-card">
-                        <div class="feature-icon">⚡</div>
-                        <h3>Solo / Duo / Squad BR</h3>
-                        <p>Rally your trusted roster. Integrated team joining, in-game name verification, and automatic room credentials distribution.</p>
-                        <a href="#/tournaments" class="btn btn-sm btn-secondary" style="margin-top:14px;">Browse All Matches</a>
+                    <article class="feature-card" style="display:flex; flex-direction:column; overflow:hidden; padding:0;">
+                        <div style="width:100%; height:160px; background:radial-gradient(circle at 50% 50%, #201335 0%, #0c0e15 100%); display:flex; flex-direction:column; align-items:center; justify-content:center; border-bottom:1px solid var(--line);">
+                            <span style="font-size:42px;">⚡</span>
+                            <strong style="color:var(--gold); font-size:13px; letter-spacing:1px; margin-top:6px;">SOLO • DUO • SQUAD</strong>
+                        </div>
+                        <div style="padding:20px; flex:1; display:flex; flex-direction:column;">
+                            <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                                <span class="pill" style="border-color:var(--gold); color:var(--gold); font-size:11px;">ALL ROSTERS</span>
+                                <span class="pill" style="border-color:var(--green); color:var(--green); font-size:11px;">ROOM CREDENTIALS</span>
+                            </div>
+                            <h3 style="margin:0 0 8px; font-size:18px;">Solo / Duo / Squad Arena</h3>
+                            <p style="font-size:13px; line-height:1.5; color:var(--muted); flex:1; margin:0 0 16px;">Rally your trusted roster. Integrated team joining, in-game name verification, and automatic room credentials distribution.</p>
+                            <a href="#/tournaments" class="btn btn-sm btn-secondary full" style="font-weight:700;">Browse All Matches →</a>
+                        </div>
                     </article>
                 </div>
             </div>
@@ -359,9 +380,9 @@ export async function renderHome() {
                                 <div class="wa-perk"><span class="wa-perk-icon">🎁</span> Daily Giveaways & Free Passes</div>
                                 <div class="wa-perk"><span class="wa-perk-icon">🛡</span> Direct Admin & Staff Support</div>
                             </div>
-                            <a href="https://chat.whatsapp.com/F3m1XBWHgFu7iKHVodNGBD?s=sh&p=a&mlu=4&ilr=4" target="_blank" rel="noopener noreferrer" class="btn-wa-community">
+                            <a href="https://whatsapp.com/channel/0029VbDg9qMAInPs1jczCc2U" target="_blank" rel="noopener noreferrer" class="btn-wa-community">
                                 <svg viewBox="0 0 32 32" style="width:22px; height:22px; fill:currentColor;"><path d="M16 2a13.9 13.9 0 0 0-12 21L2 30l7.2-1.9A13.9 13.9 0 1 0 16 2zm0 25.5a11.5 11.5 0 0 1-5.9-1.6l-.4-.2-4.4 1.2 1.2-4.3-.3-.4a11.6 11.6 0 1 1 9.8 5.3zm6.4-8.6c-.3-.2-2-1-2.3-1.1-.3-.1-.6-.2-.8.2s-.9 1.1-1.1 1.3-.4.2-.7 0a9.2 9.2 0 0 1-2.7-1.7 10.2 10.2 0 0 1-1.9-2.3c-.2-.3 0-.5.2-.7l.5-.6c.2-.2.2-.4.3-.6.1-.2 0-.4 0-.5s-.8-2-1.1-2.7c-.3-.7-.6-.6-.8-.6h-.7c-.2 0-.7.1-1.1.5s-1.5 1.5-1.5 3.6 1.5 4.2 1.7 4.5c.2.3 3 4.6 7.4 6.4 1 .4 1.9.7 2.5.9 1.1.3 2.1.3 2.9.2.9-.1 2.8-1.1 3.2-2.2.4-1.1.4-2.1.3-2.3-.1-.2-.4-.3-.7-.5z"/></svg>
-                                <span>JOIN OFFICIAL WHATSAPP GROUP</span>
+                                <span>JOIN OFFICIAL WHATSAPP CHANNEL</span>
                             </a>
                         </div>
                         <div class="wa-card-preview">
@@ -442,7 +463,26 @@ async function loadHeroBanners() {
         if (!slidesContainer || !dotsContainer) return;
 
         if (banners.length === 0) {
-            slidesContainer.innerHTML = `<div class="hero-slide active" style="background: radial-gradient(circle at 60% 30%, #301869 0%, #07080c 70%);"></div>`;
+            slidesContainer.innerHTML = `
+                <div class="hero-slide active" style="background-image: url('assets/banner_br.jpg'); background-size: cover; background-position: center;"></div>
+                <div class="hero-slide" style="background-image: url('assets/banner_lonewolf.jpg'); background-size: cover; background-position: center;"></div>
+            `;
+            dotsContainer.innerHTML = `
+                <div class="dot active" data-index="0"></div>
+                <div class="dot" data-index="1"></div>
+            `;
+            let curIdx = 0;
+            const slides = document.querySelectorAll(".hero-slide");
+            const dots = document.querySelectorAll(".dot");
+
+            function switchSlide(index) {
+                slides.forEach((s, i) => s.classList.toggle("active", i === index));
+                dots.forEach((d, i) => d.classList.toggle("active", i === index));
+                curIdx = index;
+            }
+
+            dots.forEach(d => d.onclick = () => switchSlide(Number(d.dataset.index)));
+            setInterval(() => switchSlide((curIdx + 1) % 2), 5000);
             return;
         }
 
@@ -559,39 +599,48 @@ function renderTournamentCardHtml(t) {
         actionBtn = `<a href="#/tournaments/${t.id}" class="btn btn-sm btn-secondary">Match Ended</a>`;
     }
 
+    const bannerImg = is1v1 ? "assets/banner_lonewolf.jpg" : "assets/banner_br.jpg";
+    const bannerAlt = is1v1 ? "Free Fire 1v1 Lone Wolf Match" : "Free Fire Battle Royale Tournament";
+
     return `
         <article class="tournament-card">
-            <div class="tournament-card-top">
-                <span class="tournament-game">${esc(t.game || "Free Fire")} • ${esc(mode)}</span>
-                ${statusBadge}
-            </div>
-            <h3>${esc(t.name || "Tournament")}</h3>
-            <div class="tournament-details">
-                <div>
-                    <span>ENTRY FEE</span>
-                    <strong>${Number(t.entryFee) === 0 ? '<span style="color:var(--green)">FREE</span>' : money(t.entryFee)}</strong>
-                </div>
-                <div>
-                    <span>PRIZE POOL</span>
-                    <strong style="color:var(--gold)">${money(prize)}</strong>
-                </div>
-                <div>
-                    <span>${is1v1 ? 'FORMAT' : 'KILL REWARD'}</span>
-                    <strong>${is1v1 ? 'Winner Takes All' : (Number(perKill) > 0 ? money(perKill) + '/kill' : '—')}</strong>
+            <div class="tournament-card-hero">
+                <img src="${bannerImg}" alt="${bannerAlt}" class="tournament-card-banner" loading="lazy">
+                <div class="tournament-card-hero-overlay"></div>
+                <div class="tournament-card-top">
+                    <span class="tournament-game">${esc(t.game || "Free Fire")} • ${esc(mode)}</span>
+                    ${statusBadge}
                 </div>
             </div>
-            <div class="slots-bar-wrap">
-                <div class="slots-info">
-                    <span>${is1v1 ? 'Players Registered' : 'Slots Filled'}</span>
-                    <strong>${joined} / ${slots}</strong>
+            <div class="tournament-card-body">
+                <h3>${esc(t.name || "Tournament")}</h3>
+                <div class="tournament-details">
+                    <div>
+                        <span>ENTRY FEE</span>
+                        <strong>${Number(t.entryFee) === 0 ? '<span style="color:var(--green)">FREE</span>' : money(t.entryFee)}</strong>
+                    </div>
+                    <div>
+                        <span>PRIZE POOL</span>
+                        <strong style="color:var(--gold)">${money(prize)}</strong>
+                    </div>
+                    <div>
+                        <span>${is1v1 ? 'FORMAT' : 'KILL REWARD'}</span>
+                        <strong>${is1v1 ? 'Winner Takes All' : (Number(perKill) > 0 ? money(perKill) + '/kill' : '—')}</strong>
+                    </div>
                 </div>
-                <div class="slots-bar">
-                    <div class="slots-fill" style="width: ${percent}%;"></div>
+                <div class="slots-bar-wrap">
+                    <div class="slots-info">
+                        <span>${is1v1 ? 'Players Registered' : 'Slots Filled'}</span>
+                        <strong>${joined} / ${slots}</strong>
+                    </div>
+                    <div class="slots-bar">
+                        <div class="slots-fill" style="width: ${percent}%;"></div>
+                    </div>
                 </div>
-            </div>
-            <div class="card-footer-action">
-                <span class="match-time">⏰ ${formatDt(t.startTime || t.date)}</span>
-                ${actionBtn}
+                <div class="card-footer-action">
+                    <span class="match-time">⏰ ${formatDt(t.startTime || t.date)}</span>
+                    ${actionBtn}
+                </div>
             </div>
         </article>
     `;
@@ -822,9 +871,10 @@ export async function renderDashboard() {
                     <h2>Welcome back, <span style="color:var(--purple)">${esc(state.userProfile?.username || "Gamer")}</span></h2>
                     <p style="color:var(--muted); margin:4px 0 0;">Manage your match entries, track live room codes, and cash out your winnings.</p>
                 </div>
-                <div class="dashboard-banner-actions">
-                    <a href="#/tournaments" class="btn btn-primary">Join Tournaments</a>
-                    <a href="#/deposit" class="btn btn-secondary">Add Cash ₹</a>
+                <div class="dashboard-banner-actions" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                    <a href="#/deposit" class="btn btn-primary" style="background:var(--green); color:#000; font-weight:800; border:none; box-shadow:0 0 15px rgba(0,230,118,0.3);">＋ Deposit ₹</a>
+                    <a href="#/withdraw" class="btn btn-secondary" style="border-color:var(--gold); color:var(--gold); font-weight:800;">↙ Withdraw ₹</a>
+                    <a href="#/tournaments" class="btn btn-secondary">Join Tournaments</a>
                 </div>
             </div>
 
@@ -1854,11 +1904,13 @@ export function renderDeposit() {
                 
                 <div class="form-grid" style="margin-top:20px;">
                     <label style="grid-column:1/-1;">
-                        Enter Deposit Amount (₹)
-                        <input id="depositAmountInput" type="number" min="10" step="1" value="100" placeholder="Min ₹10">
+                        Enter Deposit Amount (₹) - Multiples of ₹10
+                        <input id="depositAmountInput" type="number" min="10" step="10" value="100" placeholder="Min ₹10 (multiples of 10)">
                     </label>
 
                     <div style="grid-column:1/-1; display:flex; gap:8px; flex-wrap:wrap;">
+                        <button class="mini" data-preset="10">+ ₹10</button>
+                        <button class="mini" data-preset="20">+ ₹20</button>
                         <button class="mini" data-preset="50">+ ₹50</button>
                         <button class="mini" data-preset="100">+ ₹100</button>
                         <button class="mini" data-preset="200">+ ₹200</button>
@@ -1871,7 +1923,7 @@ export function renderDeposit() {
                 </div>
 
                 <div class="notice" style="margin-top:20px;">
-                    🔒 Powered by Razorpay. 100% secure payments. No payment credentials or passwords are ever stored on our servers.
+                    ⚡ Instant deposit and withdrawals! Powered by Razorpay. 100% secure payments 24/7.
                 </div>
             </div>
         </div>
@@ -1885,6 +1937,10 @@ export function renderDeposit() {
         const amt = Number($("depositAmountInput").value || 0);
         if (amt < 10) {
             showToast("Minimum deposit amount is ₹10.", true);
+            return;
+        }
+        if (amt % 10 !== 0) {
+            showToast("Deposit amount must be a multiple of ₹10 (e.g. ₹10, ₹20, ₹30, ₹50, ₹100).", true);
             return;
         }
         initiateRazorpayDeposit(amt);
@@ -2005,13 +2061,13 @@ export function renderWithdraw() {
                         <span style="color:var(--muted); font-size:12px; display:block;">Available for Cashout</span>
                         <strong style="font-size:22px; color:var(--green)">${money(avail)}</strong>
                     </div>
-                    <span class="pill">Min: ₹50</span>
+                    <span class="pill" style="color:var(--green); border-color:var(--green);">Min: ₹20</span>
                 </div>
 
                 <form id="withdrawForm" class="form-grid">
                     <label>
                         Amount to Withdraw (₹) *
-                        <input id="withdrawAmt" type="number" min="50" max="${avail}" step="1" placeholder="Min ₹50" required>
+                        <input id="withdrawAmt" type="number" min="20" max="${avail}" step="1" placeholder="Min ₹20" required>
                     </label>
 
                     <label>
@@ -2028,8 +2084,8 @@ export function renderWithdraw() {
                     </label>
 
                     <div style="grid-column:1/-1; margin-top:14px;">
-                        <button type="submit" id="submitWithdrawBtn" class="btn btn-primary full" ${avail < 50 ? 'disabled' : ''}>
-                            ${avail < 50 ? 'INSUFFICIENT BALANCE (MIN ₹50)' : 'SUBMIT WITHDRAWAL REQUEST'}
+                        <button type="submit" id="submitWithdrawBtn" class="btn btn-primary full" ${avail < 20 ? 'disabled' : ''}>
+                            ${avail < 20 ? 'INSUFFICIENT BALANCE (MIN ₹20)' : 'SUBMIT WITHDRAWAL REQUEST'}
                         </button>
                     </div>
                 </form>
@@ -2037,7 +2093,7 @@ export function renderWithdraw() {
                 <p id="withdrawErr" class="error" style="margin-top:10px;"></p>
                 
                 <div class="notice" style="margin-top:20px;">
-                    ⚠️ Withdrawals are processed within 1–2 hours. The requested amount is locked immediately and deducted once approved.
+                    ⚡ Instant deposit and withdrawals! Payouts are verified and sent to your UPI ID or Bank Account instantly.
                 </div>
             </div>
         </div>
@@ -2052,8 +2108,8 @@ export function renderWithdraw() {
         const btn = $("submitWithdrawBtn");
         err.textContent = "";
 
-        if (amt < 50) {
-            err.textContent = "Minimum withdrawal amount is ₹50.";
+        if (amt < 20) {
+            err.textContent = "Minimum withdrawal amount is ₹20.";
             return;
         }
         if (amt > avail) {
@@ -2545,9 +2601,9 @@ export async function renderSupport(params) {
                     <h2 style="margin:4px 0 6px;">Join Official WhatsApp Group</h2>
                     <p style="color:var(--muted); margin:0; font-size:14px; line-height:1.5;">Need instant tournament help, query resolution, or match room alerts? Our staff and active community are live 24/7 on WhatsApp.</p>
                 </div>
-                <a href="https://chat.whatsapp.com/F3m1XBWHgFu7iKHVodNGBD?s=sh&p=a&mlu=4&ilr=4" target="_blank" rel="noopener noreferrer" class="btn btn-primary" style="background:linear-gradient(135deg,#25d366,#128c7e); border:0; padding:12px 22px; font-weight:800; font-size:14px; display:inline-flex; align-items:center; gap:8px;">
+                <a href="https://whatsapp.com/channel/0029VbDg9qMAInPs1jczCc2U" target="_blank" rel="noopener noreferrer" class="btn btn-primary" style="background:linear-gradient(135deg,#25d366,#128c7e); border:0; padding:12px 22px; font-weight:800; font-size:14px; display:inline-flex; align-items:center; gap:8px;">
                     <svg viewBox="0 0 32 32" style="width:20px; height:20px; fill:currentColor;"><path d="M16 2a13.9 13.9 0 0 0-12 21L2 30l7.2-1.9A13.9 13.9 0 1 0 16 2zm0 25.5a11.5 11.5 0 0 1-5.9-1.6l-.4-.2-4.4 1.2 1.2-4.3-.3-.4a11.6 11.6 0 1 1 9.8 5.3zm6.4-8.6c-.3-.2-2-1-2.3-1.1-.3-.1-.6-.2-.8.2s-.9 1.1-1.1 1.3-.4.2-.7 0a9.2 9.2 0 0 1-2.7-1.7 10.2 10.2 0 0 1-1.9-2.3c-.2-.3 0-.5.2-.7l.5-.6c.2-.2.2-.4.3-.6.1-.2 0-.4 0-.5s-.8-2-1.1-2.7c-.3-.7-.6-.6-.8-.6h-.7c-.2 0-.7.1-1.1.5s-1.5 1.5-1.5 3.6 1.5 4.2 1.7 4.5c.2.3 3 4.6 7.4 6.4 1 .4 1.9.7 2.5.9 1.1.3 2.1.3 2.9.2.9-.1 2.8-1.1 3.2-2.2.4-1.1.4-2.1.3-2.3-.1-.2-.4-.3-.7-.5z"/></svg>
-                    <span>JOIN WHATSAPP GROUP</span>
+                    <span>JOIN WHATSAPP CHANNEL</span>
                 </a>
             </div>
 
@@ -2562,7 +2618,7 @@ export async function renderSupport(params) {
                     </div>
                     <div class="faq-item">
                         <strong>Q: What is the minimum withdrawal amount?</strong>
-                        <p style="color:var(--muted); margin:4px 0 0;">The minimum withdrawal is ₹50 via UPI or direct Bank Transfer. Payouts are reviewed and dispatched within 1–2 hours.</p>
+                        <p style="color:var(--muted); margin:4px 0 0;">The minimum withdrawal is ₹20 via UPI or direct Bank Transfer. You can withdraw up to your full available winning balance. Payouts are processed instantly!</p>
                     </div>
                     <div class="faq-item">
                         <strong>Q: How are BR rewards calculated?</strong>
