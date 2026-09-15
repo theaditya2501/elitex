@@ -18,16 +18,10 @@
             <h1 style="text-align:center;">Staff Sign In</h1>
             <p style="text-align:center;">Sign in with an authorized administrator account for <code>elitexgamers-17353</code>.</p>
             <form id="loginForm">
-                <input id="adminEmail" type="email" placeholder="Administrator Email" value="admin@elitexgamers.com" required autocomplete="email">
-                <input id="adminPassword" type="password" placeholder="Password" value="Admin@123456" required autocomplete="current-password">
+                <input id="adminEmail" type="email" placeholder="Administrator Email" required autocomplete="email">
+                <input id="adminPassword" type="password" placeholder="Password" required autocomplete="current-password">
                 <button type="submit" class="btn btn-primary full">Sign In to Control Center</button>
-                <button id="quickAdminBtn" type="button" class="btn btn-secondary full" style="margin-top:10px;">⚡ Auto-Setup / Login as Default Admin</button>
             </form>
-            <div style="margin-top:12px; font-size:12px; color:var(--muted); text-align:center; background:#0c0e15; border:1px solid var(--line); border-radius:8px; padding:10px;">
-                <span>Default Superadmin Credentials:</span><br>
-                Email: <strong style="color:var(--gold);">admin@elitexgamers.com</strong><br>
-                Password: <strong style="color:var(--gold);">Admin@123456</strong>
-            </div>
             <p id="loginError" class="error" style="text-align:center;"></p>
             <div style="text-align:center; margin-top:16px;">
                 <a href="index.html" style="color:var(--muted); font-size:13px;">← Return to Player Website</a>
@@ -439,16 +433,28 @@
             <section id="section-deposits" class="admin-section hidden">
                 <div class="section-toolbar">
                     <div>
-                        <span class="eyebrow">INCOMING PAYMENTS</span>
-                        <h2>Deposits Review</h2>
-                        <p>Verify manual deposits and monitor automated Razorpay settlements.</p>
+                        <span class="eyebrow">INCOMING PAYMENTS & DEPOSIT HISTORY</span>
+                        <h2>Deposits History & Verification</h2>
+                        <p>Complete record of automated Razorpay payments and manual deposit proofs with instant approval controls.</p>
+                    </div>
+                </div>
+                <div class="admin-panel" style="margin-bottom:16px;">
+                    <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center;">
+                        <input id="depositSearchInput" type="text" placeholder="Search by User UID, Order ID, or Payment ID..." style="flex:1; min-width:240px;">
+                        <select id="depositStatusFilter" style="max-width:180px;">
+                            <option value="all">Status: All Deposits</option>
+                            <option value="PENDING">Pending Approval</option>
+                            <option value="COMPLETED">Completed / Credited</option>
+                            <option value="FAILED">Failed / Expired</option>
+                        </select>
+                        <button id="refreshDepositsBtn" class="btn btn-sm btn-secondary">↻ Refresh</button>
                     </div>
                 </div>
                 <div class="admin-panel table-wrapper">
                     <table>
                         <thead>
                             <tr>
-                                <th>Date</th>
+                                <th>Date & Time</th>
                                 <th>User UID</th>
                                 <th>Amount</th>
                                 <th>Method</th>
@@ -468,16 +474,28 @@
             <section id="section-withdrawals" class="admin-section hidden">
                 <div class="section-toolbar">
                     <div>
-                        <span class="eyebrow">OUTGOING PAYOUTS</span>
-                        <h2>Withdrawal Requests</h2>
-                        <p>Approve, dispatch, or reject pending player payout requests.</p>
+                        <span class="eyebrow">OUTGOING CASHOUTS & WITHDRAWAL LOGS</span>
+                        <h2>Withdrawal Payouts History</h2>
+                        <p>Track every payout request with recipient UPI / Bank details, approval states, and admin execution notes.</p>
+                    </div>
+                </div>
+                <div class="admin-panel" style="margin-bottom:16px;">
+                    <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center;">
+                        <input id="withdrawSearchInput" type="text" placeholder="Search by User UID, UPI ID, or Name..." style="flex:1; min-width:240px;">
+                        <select id="withdrawStatusFilter" style="max-width:180px;">
+                            <option value="all">Status: All Payouts</option>
+                            <option value="PENDING">Pending Processing</option>
+                            <option value="COMPLETED">Completed / Paid</option>
+                            <option value="REJECTED">Rejected / Refunded</option>
+                        </select>
+                        <button id="refreshWithdrawalsBtn" class="btn btn-sm btn-secondary">↻ Refresh</button>
                     </div>
                 </div>
                 <div class="admin-panel table-wrapper">
                     <table>
                         <thead>
                             <tr>
-                                <th>Date</th>
+                                <th>Date & Time</th>
                                 <th>User UID</th>
                                 <th>Amount</th>
                                 <th>Method</th>
@@ -497,8 +515,13 @@
             <section id="section-wallets" class="admin-section hidden">
                 <div class="section-toolbar">
                     <div>
-                        <span class="eyebrow">FINANCIAL LEDGER</span>
-                        <h2>Wallets Audit</h2>
+                        <span class="eyebrow">FINANCIAL LEDGER & USER BALANCES</span>
+                        <h2>Wallets Master Ledger</h2>
+                        <p>Real-time audit of every user's available balance, locked funds, total deposits, and total winnings.</p>
+                    </div>
+                    <div class="user-tools">
+                        <input type="search" id="walletSearchInput" placeholder="Search UID or balance..." class="search-input">
+                        <button id="refreshWalletsBtn" class="btn btn-secondary">↻ Refresh</button>
                     </div>
                 </div>
                 <div class="admin-panel table-wrapper">
@@ -506,15 +529,74 @@
                         <thead>
                             <tr>
                                 <th>User UID</th>
-                                <th>Balance</th>
+                                <th>Available Balance</th>
                                 <th>Locked Balance</th>
                                 <th>Total Deposited</th>
                                 <th>Total Withdrawn</th>
-                                <th>Total Won</th>
+                                <th>Total Winnings Won</th>
                             </tr>
                         </thead>
                         <tbody id="walletsTable">
                             <tr><td colspan="6">Loading wallet records...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- 10B. TRANSACTIONS (FULL FINANCIAL HISTORY) -->
+            <section id="section-transactions" class="admin-section hidden">
+                <div class="section-toolbar">
+                    <div>
+                        <span class="eyebrow">COMPLETE AUDIT TRAIL</span>
+                        <h2>All Transactions History</h2>
+                        <p>Complete, searchable ledger of all money movement: deposits, match entry deductions, prize payouts, and cashouts.</p>
+                    </div>
+                </div>
+
+                <!-- Transaction Summary KPIs -->
+                <div class="admin-stats" style="margin-bottom:16px;">
+                    <div class="admin-stat"><span>Total Transactions</span><strong id="statTxTotal">—</strong></div>
+                    <div class="admin-stat"><span>Total Inflow (Deposits)</span><strong id="statTxInflow" style="color:var(--green);">—</strong></div>
+                    <div class="admin-stat"><span>Total Prize Outflow</span><strong id="statTxPrizes" style="color:var(--gold);">—</strong></div>
+                    <div class="admin-stat"><span>Total Cashouts Paid</span><strong id="statTxWithdrawals" style="color:var(--red);">—</strong></div>
+                </div>
+
+                <div class="admin-panel" style="margin-bottom:16px;">
+                    <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center;">
+                        <input id="txSearchInput" type="text" placeholder="Search by User UID, Transaction ID, Reference..." style="flex:1; min-width:240px;">
+                        <select id="txTypeFilter" style="max-width:180px;">
+                            <option value="all">Type: All Types</option>
+                            <option value="DEPOSIT">Deposits</option>
+                            <option value="MATCH_JOIN">Match Entry Fees</option>
+                            <option value="PRIZE_WIN">Prize Winnings</option>
+                            <option value="WITHDRAWAL">Cashouts</option>
+                            <option value="REFUND">Refunds</option>
+                        </select>
+                        <select id="txStatusFilter" style="max-width:160px;">
+                            <option value="all">Status: All</option>
+                            <option value="COMPLETED">Completed</option>
+                            <option value="PENDING">Pending</option>
+                            <option value="FAILED">Failed</option>
+                        </select>
+                        <button id="refreshTxBtn" class="btn btn-sm btn-secondary">↻ Refresh Ledger</button>
+                    </div>
+                </div>
+
+                <div class="admin-panel table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date & Time</th>
+                                <th>User UID</th>
+                                <th>Type</th>
+                                <th>Amount</th>
+                                <th>Description / Match Details</th>
+                                <th>Reference / Order ID</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="transactionsTable">
+                            <tr><td colspan="7">Loading full transaction history...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -668,6 +750,13 @@
                         Current App Version
                         <input id="settingVersion" value="1.0.0">
                     </label>
+                    <label>
+                        Official WhatsApp Community / Group Link
+                        <div style="display:flex; gap:8px; margin-top:4px;">
+                            <input id="settingWhatsappLink" value="https://chat.whatsapp.com/F3m1XBWHgFu7iKHVodNGBD?s=sh&p=a&mlu=4&ilr=4" placeholder="https://chat.whatsapp.com/..." style="flex:1;">
+                            <a href="https://chat.whatsapp.com/F3m1XBWHgFu7iKHVodNGBD?s=sh&p=a&mlu=4&ilr=4" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="white-space:nowrap; padding:8px 14px; font-size:12px;">Test Group ↗</a>
+                        </div>
+                    </label>
                     <button id="saveAppSettingsBtn" class="btn btn-primary" style="margin-top:10px;">Save App Settings</button>
                 </div>
             </section>
@@ -791,6 +880,70 @@
                     </table>
                 </div>
             </div>
+    <!-- Edit Tournament Modal -->
+    <div id="editTournamentModal" class="modal-backdrop hidden">
+        <div class="user-modal" style="max-width:680px; max-height:90vh; overflow-y:auto;">
+            <div class="modal-head">
+                <div>
+                    <span class="eyebrow">TOURNAMENT EDITOR</span>
+                    <h2>Edit Tournament & Room</h2>
+                    <p style="color:var(--muted); margin:4px 0 0;">Update match schedule, prize configuration, and room credentials.</p>
+                </div>
+                <button class="close-btn" id="closeEditTourneyModal">✕</button>
+            </div>
+            <form id="editTournamentForm" style="display:grid; gap:14px; margin-top:16px;">
+                <input type="hidden" id="editTourneyId">
+                <div class="form-grid">
+                    <label>Tournament Name<input id="editTourneyName" required></label>
+                    <label>Game<input id="editTourneyGame" value="Free Fire"></label>
+                </div>
+                <div class="form-grid">
+                    <label>Game Mode
+                        <select id="editTourneyMode">
+                            <option value="Solo">Solo</option>
+                            <option value="Duo">Duo</option>
+                            <option value="Squad">Squad</option>
+                            <option value="1v1">1v1 Duel</option>
+                            <option value="CS">Clash Squad (4v4)</option>
+                        </select>
+                    </label>
+                    <label>Status
+                        <select id="editTourneyStatus">
+                            <option value="upcoming">Upcoming</option>
+                            <option value="live">Live Now</option>
+                            <option value="completed">Completed</option>
+                            <option value="cancelled">Cancelled</option>
+                        </select>
+                    </label>
+                </div>
+                <div class="form-grid">
+                    <label>Map<input id="editTourneyMap" value="Bermuda"></label>
+                    <label>Match Start Time<input type="datetime-local" id="editTourneyStart"></label>
+                </div>
+                <div class="form-grid">
+                    <label>Entry Fee (₹)<input type="number" id="editTourneyEntry" min="0"></label>
+                    <label>Prize Pool (₹)<input type="number" id="editTourneyPrize" min="0"></label>
+                </div>
+                <div class="form-grid">
+                    <label>Per Kill Coins (₹)<input type="number" id="editTourneyPerKill" min="0"></label>
+                    <label>Max Slots<input type="number" id="editTourneySlots" min="2"></label>
+                </div>
+                <div style="background:#0c0e15; border:1px solid var(--line); border-radius:12px; padding:16px; margin-top:4px;">
+                    <span class="eyebrow" style="color:var(--green);">ROOM CREDENTIALS CONTROL</span>
+                    <div class="form-grid" style="margin-top:10px;">
+                        <label>Room ID<input id="editTourneyRoom" placeholder="e.g. 12345678"></label>
+                        <label>Room Password<input id="editTourneyPass" placeholder="e.g. abc123"></label>
+                    </div>
+                    <label class="check" style="margin-top:10px; display:flex; align-items:center; gap:8px;">
+                        <input id="editTourneyRelease" type="checkbox">
+                        <strong style="color:#fff;">Release Room ID & Password immediately to registered players</strong>
+                    </label>
+                </div>
+                <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:10px;">
+                    <button type="button" class="btn btn-secondary" id="cancelEditTourneyBtn">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="saveEditTourneyBtn">Save Tournament Changes</button>
+                </div>
+            </form>
         </div>
     </div>
 

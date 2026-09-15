@@ -7,7 +7,11 @@
     "ignore": [
       "firebase.json",
       "**/.*",
-      "**/node_modules/**"
+      "**/node_modules/**",
+      "ser.py",
+      "*.bat",
+      "*.md",
+      "firestore.rules"
     ],
     "cleanUrls": true,
     "trailingSlash": false,

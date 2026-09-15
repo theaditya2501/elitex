@@ -263,6 +263,51 @@ export async function renderHome() {
                 </div>
             </div>
         </section>
+
+        <!-- Official WhatsApp Community Section -->
+        <section class="section" style="padding-top:0;">
+            <div class="container">
+                <div class="wa-community-section">
+                    <div class="wa-community-grid">
+                        <div>
+                            <div class="wa-community-badge">
+                                <span style="font-size:14px;">💬</span> VERIFIED ESPORTS COMMUNITY
+                            </div>
+                            <h2 class="wa-community-title">Join Elite X Gamers on WhatsApp</h2>
+                            <p class="wa-community-desc">Get instant match notifications, custom room IDs & passwords directly on your phone 15 minutes before the match starts, 24/7 staff support, and daily Free Fire giveaways!</p>
+                            <div class="wa-perks">
+                                <div class="wa-perk"><span class="wa-perk-icon">⚡</span> 15-Min Prior Room ID & Pass</div>
+                                <div class="wa-perk"><span class="wa-perk-icon">💰</span> Instant UPI Withdrawal Help</div>
+                                <div class="wa-perk"><span class="wa-perk-icon">🎁</span> Daily Giveaways & Free Passes</div>
+                                <div class="wa-perk"><span class="wa-perk-icon">🛡</span> Direct Admin & Staff Support</div>
+                            </div>
+                            <a href="https://chat.whatsapp.com/F3m1XBWHgFu7iKHVodNGBD?s=sh&p=a&mlu=4&ilr=4" target="_blank" rel="noopener noreferrer" class="btn-wa-community">
+                                <svg viewBox="0 0 32 32" style="width:22px; height:22px; fill:currentColor;"><path d="M16 2a13.9 13.9 0 0 0-12 21L2 30l7.2-1.9A13.9 13.9 0 1 0 16 2zm0 25.5a11.5 11.5 0 0 1-5.9-1.6l-.4-.2-4.4 1.2 1.2-4.3-.3-.4a11.6 11.6 0 1 1 9.8 5.3zm6.4-8.6c-.3-.2-2-1-2.3-1.1-.3-.1-.6-.2-.8.2s-.9 1.1-1.1 1.3-.4.2-.7 0a9.2 9.2 0 0 1-2.7-1.7 10.2 10.2 0 0 1-1.9-2.3c-.2-.3 0-.5.2-.7l.5-.6c.2-.2.2-.4.3-.6.1-.2 0-.4 0-.5s-.8-2-1.1-2.7c-.3-.7-.6-.6-.8-.6h-.7c-.2 0-.7.1-1.1.5s-1.5 1.5-1.5 3.6 1.5 4.2 1.7 4.5c.2.3 3 4.6 7.4 6.4 1 .4 1.9.7 2.5.9 1.1.3 2.1.3 2.9.2.9-.1 2.8-1.1 3.2-2.2.4-1.1.4-2.1.3-2.3-.1-.2-.4-.3-.7-.5z"/></svg>
+                                <span>JOIN OFFICIAL WHATSAPP GROUP</span>
+                            </a>
+                        </div>
+                        <div class="wa-card-preview">
+                            <div class="wa-card-header">
+                                <div class="wa-card-avatar">EXG</div>
+                                <div>
+                                    <strong style="color:#fff; font-size:15px; display:block;">Elite X Gamers Official Community</strong>
+                                    <small style="color:#25D366; font-weight:700;">● 10,000+ Active Players</small>
+                                </div>
+                            </div>
+                            <div class="wa-chat-bubble">
+                                <strong style="color:var(--gold);">📢 Admin:</strong> Free Fire Duo Clash #24 Room ID is released! Join slot now!
+                            </div>
+                            <div class="wa-chat-bubble" style="background:#131520; border-left-color:var(--purple);">
+                                <strong style="color:var(--purple);">🎮 Room Credentials:</strong> ID: <code>89410294</code> • Pass: <code>exg99</code>
+                            </div>
+                            <div class="wa-chat-bubble" style="background:#131520; border-left-color:var(--green); margin-bottom:0;">
+                                <strong style="color:var(--green);">💰 Instant Payout:</strong> Winner prize ₹500 credited via UPI!
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
     `;
 
     loadHeroBanners();
@@ -894,6 +939,53 @@ export async function renderTournamentDetails(params) {
                     </div>
                 </div>
 
+                <!-- Room Credentials Section -->
+                ${(() => {
+                    const startMs = (t.startTime?.toDate ? t.startTime.toDate().getTime() : new Date(t.startTime || t.date || 0).getTime()) || 0;
+                    const isNearStart = startMs > 0 && (startMs - Date.now()) <= 15 * 60 * 1000;
+                    const isLive = (t.status || "").toLowerCase() === "live" || (t.status || "").toLowerCase() === "started";
+                    const isCompleted = (t.status || "").toLowerCase() === "completed" || t.resultsPublished === true;
+                    const isExplicitlyReleased = t.roomReleased === true || t.roomReleased === "true" || t.releaseRoomDetails === true || t.releaseRoomDetails === "true";
+                    const hasRoomId = Boolean(t.roomId && String(t.roomId).trim() !== "" && String(t.roomId).trim() !== "—");
+                    const isRoomUnlocked = isCompleted || isExplicitlyReleased || (hasRoomId && (isNearStart || isLive));
+                    const roomId = t.roomId || "—";
+                    const roomPass = t.roomPassword || "—";
+
+                    if (isRoomUnlocked && hasRoomId) {
+                        return `
+                            <div class="admin-panel" style="margin-top:24px; border:1px dashed var(--green); background:#0c121e;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                                    <div>
+                                        <span class="eyebrow" style="color:var(--green);">🔓 ROOM CREDENTIALS UNLOCKED</span>
+                                        <div style="display:flex; gap:36px; margin-top:10px;">
+                                            <div>
+                                                <span style="font-size:11px; color:var(--muted); display:block;">Room ID:</span>
+                                                <strong style="font-size:18px; color:#fff; font-family:monospace;">${esc(roomId)}</strong>
+                                            </div>
+                                            <div>
+                                                <span style="font-size:11px; color:var(--muted); display:block;">Password:</span>
+                                                <strong style="font-size:18px; color:var(--green); font-family:monospace;">${esc(roomPass)}</strong>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button class="btn btn-sm btn-primary" onclick="navigator.clipboard.writeText('Room ID: ${esc(roomId)}, Password: ${esc(roomPass)}'); showToast('Room credentials copied!');">
+                                        Copy Room Credentials
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        return `
+                            <div class="admin-panel" style="margin-top:24px; background:#0c0e15;">
+                                <span class="eyebrow" style="color:var(--muted);">🔒 ROOM DETAILS (LOCKED)</span>
+                                <p style="color:var(--muted); margin:6px 0 0; font-size:13px;">
+                                    Room ID and password will be displayed 15 minutes before match time or when released by organizer.
+                                </p>
+                            </div>
+                        `;
+                    }
+                })()}
+
                 <!-- Prize Breakup & Rules -->
                 <div class="admin-grid" style="margin-top:24px;">
                     <div class="admin-panel">
@@ -1203,9 +1295,12 @@ async function loadMyMatchesList(tab) {
 
         const filtered = matches.filter(t => {
             const s = (t.status || "upcoming").toLowerCase();
-            if (tab === "upcoming") return s === "upcoming" || s === "registration_open";
-            if (tab === "live") return s === "live";
-            if (tab === "completed") return s === "completed" || t.resultsPublished === true;
+            const startMs = (t.startTime?.toDate ? t.startTime.toDate().getTime() : new Date(t.startTime || t.date || 0).getTime()) || 0;
+            const isCompleted = s === "completed" || s === "cancelled" || s === "canceled" || t.resultsPublished === true;
+
+            if (tab === "completed") return isCompleted;
+            if (tab === "live") return !isCompleted && (s === "live" || s === "started" || s === "in_progress" || (startMs > 0 && startMs <= Date.now()));
+            if (tab === "upcoming") return !isCompleted && (s === "upcoming" || s === "open" || s === "registration_open" || s === "starting_soon" || (startMs > Date.now() || startMs === 0));
             return true;
         });
 
@@ -1231,7 +1326,11 @@ async function loadMyMatchesList(tab) {
 
 function renderMyMatchCard(t, isCompletedTab = false) {
     const isCompleted = isCompletedTab || (t.status || "").toLowerCase() === "completed" || t.resultsPublished === true;
-    const isReleased = isCompleted || t.roomReleased === true || t.releaseRoomDetails === true;
+    const startMs = (t.startTime?.toDate ? t.startTime.toDate().getTime() : new Date(t.startTime || t.date || 0).getTime()) || 0;
+    const isNearStart = startMs > 0 && (startMs - Date.now()) <= 15 * 60 * 1000;
+    const hasRoomCreds = Boolean(t.roomId && String(t.roomId).trim() !== "" && String(t.roomId).trim() !== "—");
+    const isExplicitlyReleased = t.roomReleased === true || t.roomReleased === "true" || t.releaseRoomDetails === true || t.releaseRoomDetails === "true";
+    const isReleased = isCompleted || isExplicitlyReleased || (hasRoomCreds && (isNearStart || (t.status || "").toLowerCase() === "live" || (t.status || "").toLowerCase() === "started"));
     const roomId = t.roomId || "—";
     const roomPass = t.roomPassword || "—";
 
@@ -1267,9 +1366,14 @@ function renderMyMatchCard(t, isCompletedTab = false) {
             ${resultBannerHtml}
 
             <div class="room-credentials-box" style="background:#090a0f; border:1px dashed ${isReleased ? 'var(--green)' : 'var(--line)'}; border-radius:14px; padding:14px; margin:14px 0;">
-                <span class="eyebrow" style="color:${isReleased ? 'var(--green)' : 'var(--muted)'};">
-                    ${isCompleted ? '📜 ARCHIVED MATCH CREDENTIALS' : (isReleased ? '🔓 ROOM CREDENTIALS UNLOCKED' : '🔒 ROOM DETAILS (LOCKED)')}
-                </span>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span class="eyebrow" style="color:${isReleased ? 'var(--green)' : 'var(--muted)'};">
+                        ${isCompleted ? '📜 ARCHIVED MATCH CREDENTIALS' : (isReleased ? '🔓 ROOM CREDENTIALS UNLOCKED' : '🔒 ROOM DETAILS (LOCKED)')}
+                    </span>
+                    ${isReleased && hasRoomCreds ? `
+                        <button class="btn btn-sm" style="padding:2px 8px; font-size:11px; background:#18281d; color:var(--green); border:1px solid var(--green); cursor:pointer;" onclick="navigator.clipboard.writeText('Room ID: ${esc(roomId)}, Password: ${esc(roomPass)}'); showToast('Room credentials copied!');">Copy</button>
+                    ` : ''}
+                </div>
                 ${isReleased ? `
                     <div style="display:flex; justify-content:space-between; margin-top:8px;">
                         <div>
@@ -1283,7 +1387,7 @@ function renderMyMatchCard(t, isCompletedTab = false) {
                     </div>
                 ` : `
                     <p style="font-size:12px; color:var(--muted); margin:6px 0 0;">
-                        Room ID and password will be displayed 15 minutes before the match starts.
+                        Room ID and password will be displayed 15 minutes before the match starts or when released by organizer.
                     </p>
                 `}
             </div>
@@ -2089,6 +2193,19 @@ export async function renderSupport(params) {
                     <p style="color:var(--muted); margin:4px 0 0;">Find answers to common questions or submit a ticket to our support team.</p>
                 </div>
                 ${state.currentUser ? `<button id="newTicketBtn" class="btn btn-primary">Create Ticket +</button>` : ''}
+            </div>
+
+            <!-- Official WhatsApp Direct Group & Help Card -->
+            <div class="admin-panel" style="margin-top:20px; border:1px solid rgba(37,211,102,.35); background:radial-gradient(ellipse at 90% 20%, rgba(37,211,102,.1) 0%, #11131c 65%); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
+                <div style="max-width:560px;">
+                    <span class="eyebrow" style="color:#25d366;">FASTEST RESPONSE & REAL-TIME COMMUNITY</span>
+                    <h2 style="margin:4px 0 6px;">Join Official WhatsApp Group</h2>
+                    <p style="color:var(--muted); margin:0; font-size:14px; line-height:1.5;">Need instant tournament help, query resolution, or match room alerts? Our staff and active community are live 24/7 on WhatsApp.</p>
+                </div>
+                <a href="https://chat.whatsapp.com/F3m1XBWHgFu7iKHVodNGBD?s=sh&p=a&mlu=4&ilr=4" target="_blank" rel="noopener noreferrer" class="btn btn-primary" style="background:linear-gradient(135deg,#25d366,#128c7e); border:0; padding:12px 22px; font-weight:800; font-size:14px; display:inline-flex; align-items:center; gap:8px;">
+                    <svg viewBox="0 0 32 32" style="width:20px; height:20px; fill:currentColor;"><path d="M16 2a13.9 13.9 0 0 0-12 21L2 30l7.2-1.9A13.9 13.9 0 1 0 16 2zm0 25.5a11.5 11.5 0 0 1-5.9-1.6l-.4-.2-4.4 1.2 1.2-4.3-.3-.4a11.6 11.6 0 1 1 9.8 5.3zm6.4-8.6c-.3-.2-2-1-2.3-1.1-.3-.1-.6-.2-.8.2s-.9 1.1-1.1 1.3-.4.2-.7 0a9.2 9.2 0 0 1-2.7-1.7 10.2 10.2 0 0 1-1.9-2.3c-.2-.3 0-.5.2-.7l.5-.6c.2-.2.2-.4.3-.6.1-.2 0-.4 0-.5s-.8-2-1.1-2.7c-.3-.7-.6-.6-.8-.6h-.7c-.2 0-.7.1-1.1.5s-1.5 1.5-1.5 3.6 1.5 4.2 1.7 4.5c.2.3 3 4.6 7.4 6.4 1 .4 1.9.7 2.5.9 1.1.3 2.1.3 2.9.2.9-.1 2.8-1.1 3.2-2.2.4-1.1.4-2.1.3-2.3-.1-.2-.4-.3-.7-.5z"/></svg>
+                    <span>JOIN WHATSAPP GROUP</span>
+                </a>
             </div>
 
             <!-- FAQ Section -->

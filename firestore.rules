@@ -34,23 +34,26 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // Wallets: Read user own wallet; admin can update; user can create initial wallet
+    // Wallets: Read user own wallet; user can create and update (for match join); admin full access
     match /wallets/{walletId} {
       allow read: if isUser(walletId) || isAdmin();
       allow create: if isUser(walletId) || isAdmin();
-      allow update, delete: if isAdmin();
+      allow update: if isUser(walletId) || isAdmin();
+      allow delete: if isAdmin();
     }
 
     // Wallet Transactions
     match /walletTransactions/{transactionId} {
       allow read: if isAdmin() || (signedIn() && (resource == null || resource.data.uid == request.auth.uid || resource.data.userId == request.auth.uid));
-      allow write: if isAdmin();
+      allow create: if signedIn() && (request.resource.data.uid == request.auth.uid || request.resource.data.userId == request.auth.uid || isAdmin());
+      allow update, delete: if isAdmin();
     }
 
     // Legacy transactions collection support
     match /transactions/{transactionId} {
       allow read: if isAdmin() || (signedIn() && (resource == null || resource.data.uid == request.auth.uid || resource.data.userId == request.auth.uid));
-      allow write: if isAdmin();
+      allow create: if signedIn() && (request.resource.data.uid == request.auth.uid || request.resource.data.userId == request.auth.uid || isAdmin());
+      allow update, delete: if isAdmin();
     }
 
     // Deposits
@@ -84,7 +87,14 @@ service cloud.firestore {
     // Tournaments & subcollections
     match /tournaments/{tournamentId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow create, delete: if isAdmin();
+      // Admins have full edit; signed-in users can update slot counts when joining
+      allow update: if isAdmin() || (
+        signedIn() &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'joinedSlots', 'currentSlots', 'joinedTeams', 'joinedPlayers', 'joined', 'updatedAt'
+        ])
+      );
 
       match /entries/{entryId} {
         allow read: if true;
@@ -109,6 +119,36 @@ service cloud.firestore {
       }
 
       match /brackets/{bracketId} {
+        allow read: if true;
+        allow write: if isAdmin();
+      }
+    }
+
+    // Matches (top-level collection read by Android app & Web)
+    match /matches/{matchId} {
+      allow read: if true;
+      allow create, delete: if isAdmin();
+      // Admins have full edit; signed-in users can update slot counts when joining
+      allow update: if isAdmin() || (
+        signedIn() &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'joinedSlots', 'currentSlots', 'joinedTeams', 'joinedPlayers', 'joined', 'updatedAt'
+        ])
+      );
+
+      match /entries/{entryId} {
+        allow read: if true;
+        allow create: if signedIn();
+        allow update, delete: if isAdmin() || (signedIn() && resource.data.userId == request.auth.uid);
+      }
+
+      match /joins/{joinId} {
+        allow read: if true;
+        allow create: if signedIn();
+        allow update, delete: if isAdmin() || (signedIn() && resource.data.userId == request.auth.uid);
+      }
+
+      match /results/{resultId} {
         allow read: if true;
         allow write: if isAdmin();
       }

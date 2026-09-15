@@ -164,6 +164,7 @@ function showSection(name) {
     if (name === "deposits") loadDepositsList();
     if (name === "withdrawals") loadWithdrawalsList();
     if (name === "wallets") loadWalletsList();
+    if (name === "transactions") loadTransactionsList();
     if (name === "support") loadSupportTickets();
     if (name === "banners") loadBanners();
     if (name === "faqs") loadFaqs();
@@ -416,6 +417,10 @@ async function loadTournamentsList() {
             </tr>
         `).join("");
 
+        document.querySelectorAll("[data-edit-tourney]").forEach(b => {
+            b.onclick = () => openEditTournamentModal(b.dataset.editTourney);
+        });
+
         document.querySelectorAll("[data-del-tourney]").forEach(b => {
             b.onclick = async () => {
                 if (confirm("Are you sure you want to delete this tournament?")) {
@@ -430,6 +435,117 @@ async function loadTournamentsList() {
     }
 }
 
+// Edit Tournament Modal logic
+async function openEditTournamentModal(tourneyId) {
+    const modal = $("editTournamentModal");
+    if (!modal) return;
+
+    try {
+        const snap = await getDoc(doc(db, "tournaments", tourneyId));
+        if (!snap.exists()) {
+            toast("Tournament not found.", true);
+            return;
+        }
+
+        const t = { id: snap.id, ...snap.data() };
+        $("editTourneyId").value = t.id;
+        $("editTourneyName").value = t.name || "";
+        $("editTourneyGame").value = t.game || "Free Fire";
+        $("editTourneyMode").value = t.mode || "Solo";
+        $("editTourneyStatus").value = (t.status || "upcoming").toLowerCase();
+        $("editTourneyMap").value = t.map || "Bermuda";
+
+        const startMs = (t.startTime?.toDate ? t.startTime.toDate().getTime() : new Date(t.startTime || t.date || 0).getTime()) || 0;
+        if (startMs > 0) {
+            const dt = new Date(startMs);
+            const iso = new Date(dt.getTime() - dt.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+            $("editTourneyStart").value = iso;
+        } else {
+            $("editTourneyStart").value = "";
+        }
+
+        $("editTourneyEntry").value = t.entryFee ?? 0;
+        $("editTourneyPrize").value = t.prizePool ?? t.prize ?? 0;
+        $("editTourneyPerKill").value = t.perKillCoins ?? t.perKill ?? 0;
+        $("editTourneySlots").value = t.slots ?? t.totalSlots ?? 48;
+        $("editTourneyRoom").value = t.roomId || "";
+        $("editTourneyPass").value = t.roomPassword || "";
+        $("editTourneyRelease").checked = t.roomReleased === true || t.roomReleased === "true" || t.releaseRoomDetails === true || t.releaseRoomDetails === "true";
+
+        modal.classList.remove("hidden");
+    } catch (e) {
+        toast("Error loading tournament: " + e.message, true);
+    }
+}
+
+$("closeEditTourneyModal")?.addEventListener("click", () => $("editTournamentModal")?.classList.add("hidden"));
+$("cancelEditTourneyBtn")?.addEventListener("click", () => $("editTournamentModal")?.classList.add("hidden"));
+
+$("editTournamentForm")?.addEventListener("submit", async e => {
+    e.preventDefault();
+    const id = $("editTourneyId").value;
+    if (!id) return;
+
+    try {
+        const name = $("editTourneyName").value.trim();
+        const mode = $("editTourneyMode").value;
+        const status = $("editTourneyStatus").value;
+        const game = $("editTourneyGame").value.trim() || "Free Fire";
+        const map = $("editTourneyMap").value.trim() || "Bermuda";
+        const entryFee = Number($("editTourneyEntry").value || 0);
+        const prize = Number($("editTourneyPrize").value || 0);
+        const perKill = Number($("editTourneyPerKill").value || 0);
+        const slots = Number($("editTourneySlots").value || 48);
+        const startVal = $("editTourneyStart").value;
+        const startMs = startVal ? new Date(startVal).getTime() : 0;
+        const rId = $("editTourneyRoom").value.trim();
+        const rPass = $("editTourneyPass").value.trim();
+        const rel = $("editTourneyRelease").checked;
+
+        const payload = {
+            name: name,
+            game: game,
+            mode: mode,
+            map: map,
+            status: status,
+            entryFee: entryFee,
+            prize: prize,
+            prizePool: prize,
+            perKill: perKill,
+            perKillCoins: perKill,
+            slots: slots,
+            totalSlots: slots,
+            roomId: rId,
+            roomPassword: rPass,
+            roomReleased: rel,
+            releaseRoomDetails: rel,
+            updatedAt: serverTimestamp()
+        };
+
+        if (startMs > 0) {
+            payload.startTime = startMs;
+            payload.date = new Date(startMs).toLocaleString("en-IN");
+        }
+
+        await updateDoc(doc(db, "tournaments", id), payload);
+
+        try {
+            const matchDoc = doc(db, "matches", id);
+            const mSnap = await getDoc(matchDoc);
+            if (mSnap.exists()) {
+                await updateDoc(matchDoc, payload);
+            }
+        } catch (_) {}
+
+        $("editTournamentModal")?.classList.add("hidden");
+        toast("Tournament updated successfully!");
+        loadTournamentsList();
+        loadMatchesList();
+    } catch (err) {
+        toast("Update failed: " + err.message, true);
+    }
+});
+
 async function loadMatchesList() {
     try {
         const snap = await getDocs(collection(db, "tournaments"));
@@ -440,16 +556,23 @@ async function loadMatchesList() {
         if (!tbody) return;
 
         tbody.innerHTML = rows.map(t => {
-            const isReleased = t.roomReleased === true || t.releaseRoomDetails === true;
+            const isReleased = t.roomReleased === true || t.roomReleased === "true" || t.releaseRoomDetails === true || t.releaseRoomDetails === "true";
+            const roomId = t.roomId || '';
+            const roomPass = t.roomPassword || '';
             return `
                 <tr>
                     <td><strong>${esc(t.name)}</strong></td>
-                    <td>${esc(t.mode || "Solo")}</td>
+                    <td><span class="pill">${esc(t.mode || "Solo")}</span></td>
                     <td>${formatDt(t.startTime || t.date)}</td>
-                    <td><input id="room_${t.id}" value="${esc(t.roomId || '')}" placeholder="Room ID" style="max-width:130px; padding:6px;"></td>
-                    <td><input id="pass_${t.id}" value="${esc(t.roomPassword || '')}" placeholder="Password" style="max-width:120px; padding:6px;"></td>
+                    <td><input id="room_${t.id}" value="${esc(roomId)}" placeholder="Room ID" style="max-width:130px; padding:6px; font-family:monospace; font-weight:bold;"></td>
+                    <td><input id="pass_${t.id}" value="${esc(roomPass)}" placeholder="Password" style="max-width:120px; padding:6px; font-family:monospace;"></td>
                     <td>
-                        <input id="rel_${t.id}" type="checkbox" ${isReleased ? 'checked' : ''}>
+                        <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+                            <input id="rel_${t.id}" type="checkbox" ${isReleased ? 'checked' : ''} onchange="document.getElementById('rel_lbl_${t.id}').textContent = this.checked ? 'RELEASED' : 'LOCKED'; document.getElementById('rel_lbl_${t.id}').style.color = this.checked ? 'var(--green)' : 'var(--muted)';">
+                            <span id="rel_lbl_${t.id}" style="font-size:11px; font-weight:bold; color:${isReleased ? 'var(--green)' : 'var(--muted)'};">
+                                ${isReleased ? 'RELEASED' : 'LOCKED'}
+                            </span>
+                        </label>
                     </td>
                     <td>
                         <div style="display:flex; gap:6px;">
@@ -466,16 +589,35 @@ async function loadMatchesList() {
                 const id = b.dataset.saveRoom;
                 const rId = $(`room_${id}`).value.trim();
                 const rPass = $(`pass_${id}`).value.trim();
-                const rel = $(`rel_${id}`).checked;
+                let rel = $(`rel_${id}`).checked;
 
-                await updateDoc(doc(db, "tournaments", id), {
+                if (rId && !rel) {
+                    if (confirm(`You entered Room ID "${rId}". Do you want to RELEASE it to players now?\n\n• Click OK to Release to players\n• Click Cancel to keep Locked for now`)) {
+                        rel = true;
+                        $(`rel_${id}`).checked = true;
+                    }
+                }
+
+                const payload = {
                     roomId: rId,
                     roomPassword: rPass,
                     roomReleased: rel,
                     releaseRoomDetails: rel,
                     updatedAt: serverTimestamp()
-                });
-                toast("Room credentials updated!");
+                };
+
+                await updateDoc(doc(db, "tournaments", id), payload);
+
+                try {
+                    const matchDoc = doc(db, "matches", id);
+                    const mSnap = await getDoc(matchDoc);
+                    if (mSnap.exists()) {
+                        await updateDoc(matchDoc, payload);
+                    }
+                } catch (_) {}
+
+                toast(rel ? "Room credentials saved & RELEASED to players!" : "Room credentials saved (locked)!");
+                loadMatchesList();
             };
         });
 
@@ -914,16 +1056,33 @@ $("oneVoneSaveRoomBtn")?.addEventListener("click", async () => {
     if (!current1v1Match) return;
     const rId = $("oneVoneRoomId").value.trim();
     const rPass = $("oneVoneRoomPass").value.trim();
-    const rel = $("oneVoneRoomReleased").checked;
+    let rel = $("oneVoneRoomReleased").checked;
 
-    await updateDoc(doc(db, "tournaments", current1v1Match.id), {
+    if (rId && !rel) {
+        if (confirm(`You entered Room ID "${rId}". Do you want to RELEASE it to players now?\n\n• Click OK to Release to players\n• Click Cancel to keep Locked for now`)) {
+            rel = true;
+            $("oneVoneRoomReleased").checked = true;
+        }
+    }
+
+    const payload = {
         roomId: rId,
         roomPassword: rPass,
         roomReleased: rel,
         releaseRoomDetails: rel,
         updatedAt: serverTimestamp()
-    });
-    toast("1v1 Room credentials updated!");
+    };
+
+    await updateDoc(doc(db, "tournaments", current1v1Match.id), payload);
+    try {
+        const matchDoc = doc(db, "matches", current1v1Match.id);
+        const mSnap = await getDoc(matchDoc);
+        if (mSnap.exists()) {
+            await updateDoc(matchDoc, payload);
+        }
+    } catch (_) {}
+
+    toast(rel ? "1v1 Room credentials saved & RELEASED to players!" : "1v1 Room credentials saved (locked)!");
 });
 
 // Declare Winner: Player 1
@@ -1040,111 +1199,483 @@ async function finalize1v1Winner(winner, runnerUp) {
 }
 
 // =========================================================
-// 8. DEPOSITS REVIEW
+// 7. RESULTS ARCHIVE & COMPREHENSIVE MATCH HISTORY
 // =========================================================
-async function loadDepositsList() {
+let cachedArchiveTournaments = [];
+
+async function loadResultsArchive() {
+    const tbody = $("resultsArchiveTable");
+    if (!tbody) return;
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;">Loading full historical matches archive...</td></tr>`;
+
     try {
-        const snap = await getDocs(query(collection(db, "deposits"), orderBy("createdAt", "desc"), limit(40)));
-        const list = [];
-        snap.forEach(d => list.push({ id: d.id, ...d.data() }));
+        const [tSnap, mSnap] = await Promise.all([
+            getDocs(collection(db, "tournaments")),
+            getDocs(collection(db, "matches")).catch(() => ({ docs: [] }))
+        ]);
 
-        const tbody = $("depositsTable");
-        if (!tbody) return;
+        const map = new Map();
+        tSnap.forEach(d => map.set(d.id, { id: d.id, ...d.data() }));
+        if (mSnap.docs) {
+            mSnap.forEach(d => {
+                if (!map.has(d.id)) map.set(d.id, { id: d.id, ...d.data() });
+            });
+        }
 
-        if (list.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;">No deposit records found.</td></tr>`;
+        cachedArchiveTournaments = Array.from(map.values()).sort((a, b) => {
+            const timeA = (a.startTime?.toDate ? a.startTime.toDate().getTime() : new Date(a.startTime || a.date || a.createdAt || 0).getTime()) || 0;
+            const timeB = (b.startTime?.toDate ? b.startTime.toDate().getTime() : new Date(b.startTime || b.date || b.createdAt || 0).getTime()) || 0;
+            return timeB - timeA;
+        });
+
+        filterAndRenderResultsArchive();
+    } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="7" style="color:var(--red);">Error loading match archive: ${esc(e.message)}</td></tr>`;
+    }
+}
+
+function filterAndRenderResultsArchive() {
+    const tbody = $("resultsArchiveTable");
+    if (!tbody) return;
+
+    const query = ($("resultsSearchInput")?.value || "").trim().toLowerCase();
+    const timeFilter = $("resultsTimeFilter")?.value || "all";
+    const gameFilter = $("resultsGameFilter")?.value || "all";
+
+    const now = Date.now();
+    const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
+    const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
+
+    const filtered = cachedArchiveTournaments.filter(t => {
+        // Query search
+        if (query) {
+            const name = (t.name || "").toLowerCase();
+            const map = (t.map || "").toLowerCase();
+            const id = (t.id || "").toLowerCase();
+            const mode = (t.mode || "").toLowerCase();
+            if (!name.includes(query) && !map.includes(query) && !id.includes(query) && !mode.includes(query)) {
+                return false;
+            }
+        }
+
+        // Game filter
+        if (gameFilter !== "all") {
+            const game = (t.game || "free fire").toLowerCase().replace(/[^a-z]/g, "");
+            if (gameFilter === "free_fire" && !game.includes("freefire")) return false;
+            if (gameFilter === "bgmi" && !game.includes("bgmi")) return false;
+        }
+
+        // Time filter
+        const matchMs = (t.startTime?.toDate ? t.startTime.toDate().getTime() : new Date(t.startTime || t.date || t.createdAt || 0).getTime()) || 0;
+        if (timeFilter === "7d" && (now - matchMs > SEVEN_DAYS || matchMs === 0)) return false;
+        if (timeFilter === "30d" && (now - matchMs > THIRTY_DAYS || matchMs === 0)) return false;
+        if (timeFilter === "older" && (now - matchMs <= THIRTY_DAYS && matchMs > 0)) return false;
+
+        return true;
+    });
+
+    if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:24px; color:var(--muted);">No matching historical tournament records found.</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = filtered.map(t => {
+        const isReleased = t.roomReleased === true || t.roomReleased === "true" || t.releaseRoomDetails === true || t.releaseRoomDetails === "true";
+        const status = (t.status || "upcoming").toUpperCase();
+        const statusClass = status === "COMPLETED" ? "active" : (status === "LIVE" ? "active" : "");
+        const prize = money(t.prizePool ?? t.prize ?? 0);
+        const slotsJoined = `${t.joinedSlots ?? t.currentSlots ?? 0}/${t.slots ?? t.totalSlots ?? 0}`;
+
+        return `
+            <tr>
+                <td>
+                    <strong>${esc(t.name || "Tournament")}</strong><br>
+                    <code style="font-size:11px; color:var(--muted);">${esc(t.id)}</code>
+                </td>
+                <td>
+                    <span class="pill">${esc(t.game || "Free Fire")}</span>
+                    <span class="pill" style="margin-left:4px;">${esc(t.mode || "Solo")}</span>
+                    <div style="font-size:11px; color:var(--muted); margin-top:2px;">Map: ${esc(t.map || "Bermuda")}</div>
+                </td>
+                <td>
+                    ${formatDt(t.startTime || t.date || t.createdAt)}<br>
+                    <small style="color:var(--muted);">Slots: ${slotsJoined}</small>
+                </td>
+                <td>
+                    ${t.roomId ? `
+                        <div style="font-family:monospace; font-weight:bold; font-size:13px; color:#fff;">ID: ${esc(t.roomId)}</div>
+                        <div style="font-family:monospace; font-size:12px; color:var(--muted);">Pass: ${esc(t.roomPassword || 'None')}</div>
+                        <span class="status ${isReleased ? 'active' : ''}" style="font-size:10px; margin-top:4px;">${isReleased ? 'RELEASED' : 'LOCKED'}</span>
+                    ` : '<span style="color:var(--muted); font-size:12px;">Not Configured</span>'}
+                </td>
+                <td>
+                    <strong style="color:var(--gold);">${esc(t.winnerIgn || t.winnerName || (status === 'COMPLETED' ? 'Results Published' : 'Pending'))}</strong>
+                    <div style="font-size:11px; color:var(--muted);">${esc(status === 'COMPLETED' ? 'Standings Finalized' : 'In Progress / Upcoming')}</div>
+                </td>
+                <td>
+                    <strong style="color:var(--green); font-size:14px;">${prize}</strong>
+                    <div style="font-size:11px; color:var(--muted);">Fee: ${money(t.entryFee || 0)}</div>
+                </td>
+                <td>
+                    <button class="btn btn-sm btn-secondary" data-inspect-tourney="${esc(t.id)}" style="padding:6px 12px; font-size:12px;">Inspect Scores ↗</button>
+                </td>
+            </tr>
+        `;
+    }).join("");
+
+    document.querySelectorAll("[data-inspect-tourney]").forEach(btn => {
+        btn.onclick = () => openMatchHistoryModal(btn.dataset.inspectTourney);
+    });
+}
+
+$("resultsSearchInput")?.addEventListener("input", filterAndRenderResultsArchive);
+$("resultsTimeFilter")?.addEventListener("change", filterAndRenderResultsArchive);
+$("resultsGameFilter")?.addEventListener("change", filterAndRenderResultsArchive);
+$("refreshResultsArchiveBtn")?.addEventListener("click", loadResultsArchive);
+
+// Match History Modal Inspector
+async function openMatchHistoryModal(tourneyId) {
+    const modal = $("matchHistoryDetailsModal");
+    if (!modal) return;
+
+    modal.classList.remove("hidden");
+    $("histModalTitle").textContent = "Loading Match...";
+    $("histModalEyebrow").textContent = "ARCHIVE INSPECTOR";
+    $("histModalSubtitle").textContent = `ID: ${tourneyId}`;
+    $("histModalSpecs").innerHTML = `<div class="loading">Loading match parameters...</div>`;
+    $("histModalCredentials").innerHTML = "";
+    $("histModalResultsTable").innerHTML = `<tr><td colspan="8" style="text-align:center;">Loading standings...</td></tr>`;
+    $("histModalRosterTable").innerHTML = `<tr><td colspan="4" style="text-align:center;">Loading registered roster...</td></tr>`;
+
+    try {
+        let snap = await getDoc(doc(db, "tournaments", tourneyId));
+        if (!snap.exists()) {
+            snap = await getDoc(doc(db, "matches", tourneyId));
+        }
+
+        if (!snap.exists()) {
+            $("histModalTitle").textContent = "Match Record Not Found";
             return;
         }
 
-        tbody.innerHTML = list.map(d => `
-            <tr>
-                <td>${formatDt(d.createdAt)}</td>
-                <td><small>${esc(d.uid || d.userId)}</small></td>
-                <td style="font-weight:bold; color:var(--green);">${money(d.amount)}</td>
-                <td><span class="pill">${esc(d.method || "RAZORPAY")}</span></td>
-                <td><code>${esc(d.paymentId || d.orderId || d.id)}</code></td>
-                <td><span class="status ${d.status === 'COMPLETED' ? 'active' : ''}">${esc(d.status || 'PENDING')}</span></td>
-                <td>
-                    ${d.status === 'PENDING' ? `
-                        <button class="mini approve" data-approve-dep="${d.id}" data-uid="${d.uid || d.userId}" data-amt="${d.amount}">Approve</button>
-                    ` : '—'}
-                </td>
-            </tr>
-        `).join("");
+        const t = { id: snap.id, ...snap.data() };
+        const isReleased = t.roomReleased === true || t.roomReleased === "true" || t.releaseRoomDetails === true || t.releaseRoomDetails === "true";
 
-        document.querySelectorAll("[data-approve-dep]").forEach(b => {
-            b.onclick = async () => {
-                const depId = b.dataset.approveDep;
-                const uid = b.dataset.uid;
-                const amt = Number(b.dataset.amt);
+        $("histModalTitle").textContent = t.name || "Tournament Details";
+        $("histModalEyebrow").textContent = `${(t.game || "Free Fire").toUpperCase()} • ${(t.mode || "Solo").toUpperCase()} • ${(t.map || "Bermuda").toUpperCase()}`;
+        $("histModalSubtitle").textContent = `Scheduled: ${formatDt(t.startTime || t.date)} • Status: ${(t.status || "UPCOMING").toUpperCase()}`;
 
+        $("histModalSpecs").innerHTML = `
+            <div class="admin-stat"><span>Prize Pool</span><strong style="color:var(--gold);">${money(t.prizePool ?? t.prize ?? 0)}</strong></div>
+            <div class="admin-stat"><span>Entry Fee</span><strong>${money(t.entryFee ?? 0)}</strong></div>
+            <div class="admin-stat"><span>Per Kill Coin</span><strong style="color:var(--green);">${money(t.perKillCoins ?? t.perKill ?? 0)}</strong></div>
+            <div class="admin-stat"><span>Total Slots</span><strong>${t.slots ?? t.totalSlots ?? 48}</strong></div>
+            <div class="admin-stat"><span>Joined Participants</span><strong style="color:#7C4DFF;">${t.joinedSlots ?? t.currentSlots ?? 0}</strong></div>
+        `;
+
+        $("histModalCredentials").innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                <div>
+                    <span class="eyebrow" style="color:var(--green);">ROOM CREDENTIALS ARCHIVE</span>
+                    <div style="display:flex; gap:18px; margin-top:6px; font-size:14px;">
+                        <span>Room ID: <strong style="color:#fff; font-family:monospace;">${esc(t.roomId || "Not Set")}</strong></span>
+                        <span>Password: <strong style="color:#fff; font-family:monospace;">${esc(t.roomPassword || "None")}</strong></span>
+                    </div>
+                </div>
+                <div>
+                    <span class="status ${isReleased ? 'active' : ''}" style="font-size:12px;">${isReleased ? 'CREDENTIALS RELEASED TO PLAYERS' : 'CREDENTIALS LOCKED'}</span>
+                </div>
+            </div>
+        `;
+
+        // Load Entries / Results subcollections
+        const [entriesSnap, resultsSnap] = await Promise.all([
+            getDocs(collection(db, "tournaments", tourneyId, "entries")).catch(() => ({ docs: [] })),
+            getDocs(collection(db, "tournaments", tourneyId, "results")).catch(() => ({ docs: [] }))
+        ]);
+
+        const entries = [];
+        entriesSnap.forEach(d => entries.push({ id: d.id, ...d.data() }));
+
+        const resultsMap = new Map();
+        resultsSnap.forEach(d => resultsMap.set(d.id, { id: d.id, ...d.data() }));
+
+        // Merge entries and results
+        const playerScores = entries.map(e => {
+            const r = resultsMap.get(e.userId || e.id) || {};
+            const pos = Number(r.position || e.position || 0);
+            const kills = Number(r.kills || e.kills || 0);
+            const killCoins = Number(r.killCoins || e.killCoins || 0);
+            const posCoins = Number(r.positionCoins || e.positionCoins || 0);
+            const totalPrize = Number(r.prize || e.prize || (killCoins + posCoins));
+            const ign = e.iglInGameName || e.inGameName || (e.playerNames && e.playerNames[0]) || e.ign || "Player";
+
+            return {
+                userId: e.userId || e.id,
+                ign: ign,
+                teamName: e.teamName || e.team || "—",
+                position: pos,
+                kills: kills,
+                killCoins: killCoins,
+                posCoins: posCoins,
+                totalPrize: totalPrize,
+                published: r.resultPublished || e.resultPublished || false,
+                joinedAt: e.joinedAt || e.createdAt
+            };
+        });
+
+        // Sort by position (1, 2, 3...) then kills desc
+        playerScores.sort((a, b) => {
+            if (a.position > 0 && b.position > 0) return a.position - b.position;
+            if (a.position > 0) return -1;
+            if (b.position > 0) return 1;
+            return b.kills - a.kills;
+        });
+
+        // Render Results Table
+        if (playerScores.length === 0) {
+            $("histModalResultsTable").innerHTML = `<tr><td colspan="8" style="text-align:center; padding:18px; color:var(--muted);">No player entries recorded for this tournament.</td></tr>`;
+        } else {
+            $("histModalResultsTable").innerHTML = playerScores.map(p => {
+                const medal = p.position === 1 ? "🥇 1st" : (p.position === 2 ? "🥈 2nd" : (p.position === 3 ? "🥉 3rd" : (p.position > 0 ? `#${p.position}` : "—")));
+                return `
+                    <tr>
+                        <td><strong style="color:var(--gold);">${medal}</strong></td>
+                        <td><strong>${esc(p.ign)}</strong></td>
+                        <td><span class="pill">${esc(p.teamName)}</span></td>
+                        <td><strong style="color:var(--red);">${p.kills}</strong></td>
+                        <td>${money(p.killCoins)}</td>
+                        <td>${money(p.posCoins)}</td>
+                        <td><strong style="color:var(--green); font-size:14px;">${money(p.totalPrize)}</strong></td>
+                        <td><small style="color:var(--muted); font-family:monospace;">${esc(p.userId)}</small></td>
+                    </tr>
+                `;
+            }).join("");
+        }
+
+        // Render Roster Table
+        if (entries.length === 0) {
+            $("histModalRosterTable").innerHTML = `<tr><td colspan="4" style="text-align:center; padding:18px; color:var(--muted);">No joined players.</td></tr>`;
+        } else {
+            $("histModalRosterTable").innerHTML = entries.map(e => `
+                <tr>
+                    <td><strong>${esc(e.iglInGameName || e.inGameName || (e.playerNames && e.playerNames.join(", ")) || "Player")}</strong></td>
+                    <td><span class="pill">${esc(e.teamName || e.team || "Solo")}</span></td>
+                    <td>${formatDt(e.joinedAt || e.createdAt)}</td>
+                    <td><code style="font-size:11px;">${esc(e.userId || e.id)}</code></td>
+                </tr>
+            `).join("");
+        }
+
+    } catch (e) {
+        $("histModalTitle").textContent = "Error Loading Record";
+        $("histModalSubtitle").textContent = e.message;
+    }
+}
+
+$("closeHistModalBtn")?.addEventListener("click", () => {
+    $("matchHistoryDetailsModal")?.classList.add("hidden");
+});
+
+
+// =========================================================
+// 8. DEPOSITS REVIEW & FULL HISTORY
+// =========================================================
+let cachedDepositsList = [];
+
+async function loadDepositsList() {
+    const tbody = $("depositsTable");
+    if (!tbody) return;
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;">Loading deposit records...</td></tr>`;
+
+    try {
+        const snap = await getDocs(collection(db, "deposits"));
+        cachedDepositsList = [];
+        snap.forEach(d => cachedDepositsList.push({ id: d.id, ...d.data() }));
+
+        cachedDepositsList.sort((a, b) => {
+            const timeA = (a.createdAt?.toDate ? a.createdAt.toDate().getTime() : new Date(a.createdAt || a.timestamp || 0).getTime()) || 0;
+            const timeB = (b.createdAt?.toDate ? b.createdAt.toDate().getTime() : new Date(b.createdAt || b.timestamp || 0).getTime()) || 0;
+            return timeB - timeA;
+        });
+
+        filterAndRenderDeposits();
+    } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="7" style="color:var(--red);">Error: ${esc(e.message)}</td></tr>`;
+    }
+}
+
+function filterAndRenderDeposits() {
+    const tbody = $("depositsTable");
+    if (!tbody) return;
+
+    const query = ($("depositSearchInput")?.value || "").trim().toLowerCase();
+    const statusFilter = $("depositStatusFilter")?.value || "all";
+
+    const filtered = cachedDepositsList.filter(d => {
+        if (statusFilter !== "all" && (d.status || "PENDING").toUpperCase() !== statusFilter.toUpperCase()) {
+            return false;
+        }
+        if (query) {
+            const uid = (d.uid || d.userId || "").toLowerCase();
+            const orderId = (d.orderId || d.id || "").toLowerCase();
+            const payId = (d.paymentId || "").toLowerCase();
+            const method = (d.method || "").toLowerCase();
+            if (!uid.includes(query) && !orderId.includes(query) && !payId.includes(query) && !method.includes(query)) {
+                return false;
+            }
+        }
+        return true;
+    });
+
+    if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px; color:var(--muted);">No matching deposit records found.</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = filtered.map(d => `
+        <tr>
+            <td>${formatDt(d.createdAt || d.timestamp)}</td>
+            <td><code style="font-size:12px;">${esc(d.uid || d.userId || "—")}</code></td>
+            <td style="font-weight:bold; color:var(--green); font-size:14px;">${money(d.amount)}</td>
+            <td><span class="pill">${esc(d.method || "RAZORPAY")}</span></td>
+            <td><code>${esc(d.paymentId || d.orderId || d.id)}</code></td>
+            <td><span class="status ${d.status === 'COMPLETED' ? 'active' : ''}">${esc(d.status || 'PENDING')}</span></td>
+            <td>
+                ${d.status === 'PENDING' ? `
+                    <button class="mini approve" data-approve-dep="${d.id}" data-uid="${d.uid || d.userId}" data-amt="${d.amount}">Approve</button>
+                ` : '—'}
+            </td>
+        </tr>
+    `).join("");
+
+    document.querySelectorAll("[data-approve-dep]").forEach(b => {
+        b.onclick = async () => {
+            const depId = b.dataset.approveDep;
+            const uid = b.dataset.uid;
+            const amt = Number(b.dataset.amt);
+
+            try {
                 await runTransaction(db, async tx => {
                     const wRef = doc(db, "wallets", uid);
                     const depRef = doc(db, "deposits", depId);
                     const wSnap = await tx.get(wRef);
                     const curBal = Number(wSnap.exists() ? wSnap.data().balance || 0 : 0);
 
-                    tx.set(wRef, { balance: curBal + amt, totalDeposited: increment(amt) }, { merge: true });
+                    tx.set(wRef, { balance: curBal + amt, totalDeposited: increment(amt), updatedAt: serverTimestamp() }, { merge: true });
                     tx.update(depRef, { status: "COMPLETED", processedAt: serverTimestamp() });
+
+                    const txRef = doc(collection(db, "walletTransactions"));
+                    tx.set(txRef, {
+                        transactionId: txRef.id,
+                        id: txRef.id,
+                        uid: uid,
+                        userId: uid,
+                        type: "DEPOSIT",
+                        amount: amt,
+                        status: "COMPLETED",
+                        referenceId: depId,
+                        description: `Deposit Approved (Ref: ${depId.slice(0, 8)})`,
+                        createdAt: serverTimestamp()
+                    });
                 });
 
-                toast("Deposit approved and credited.");
+                toast(`Deposit of ${money(amt)} approved and credited.`);
                 loadDepositsList();
-            };
+            } catch (err) {
+                toast("Error approving deposit: " + err.message, true);
+            }
+        };
+    });
+}
+
+$("depositSearchInput")?.addEventListener("input", filterAndRenderDeposits);
+$("depositStatusFilter")?.addEventListener("change", filterAndRenderDeposits);
+$("refreshDepositsBtn")?.addEventListener("click", loadDepositsList);
+
+// =========================================================
+// 9. WITHDRAWALS PROCESSING & FULL HISTORY
+// =========================================================
+let cachedWithdrawalsList = [];
+
+async function loadWithdrawalsList() {
+    const tbody = $("withdrawalsTable");
+    if (!tbody) return;
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;">Loading payout requests...</td></tr>`;
+
+    try {
+        const snap = await getDocs(collection(db, "withdrawals"));
+        cachedWithdrawalsList = [];
+        snap.forEach(d => cachedWithdrawalsList.push({ id: d.id, ...d.data() }));
+
+        cachedWithdrawalsList.sort((a, b) => {
+            const timeA = (a.createdAt?.toDate ? a.createdAt.toDate().getTime() : new Date(a.createdAt || 0).getTime()) || 0;
+            const timeB = (b.createdAt?.toDate ? b.createdAt.toDate().getTime() : new Date(b.createdAt || 0).getTime()) || 0;
+            return timeB - timeA;
         });
+
+        filterAndRenderWithdrawals();
     } catch (e) {
-        if ($("depositsTable")) $("depositsTable").innerHTML = `<tr><td colspan="7">Error: ${esc(e.message)}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" style="color:var(--red);">Error: ${esc(e.message)}</td></tr>`;
     }
 }
 
-// =========================================================
-// 9. WITHDRAWALS PROCESSING
-// =========================================================
-async function loadWithdrawalsList() {
-    try {
-        const snap = await getDocs(query(collection(db, "withdrawals"), orderBy("createdAt", "desc"), limit(40)));
-        const list = [];
-        snap.forEach(d => list.push({ id: d.id, ...d.data() }));
+function filterAndRenderWithdrawals() {
+    const tbody = $("withdrawalsTable");
+    if (!tbody) return;
 
-        const tbody = $("withdrawalsTable");
-        if (!tbody) return;
+    const query = ($("withdrawSearchInput")?.value || "").trim().toLowerCase();
+    const statusFilter = $("withdrawStatusFilter")?.value || "all";
 
-        if (list.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;">No withdrawal requests.</td></tr>`;
-            return;
+    const filtered = cachedWithdrawalsList.filter(w => {
+        if (statusFilter !== "all" && (w.status || "PENDING").toUpperCase() !== statusFilter.toUpperCase()) {
+            return false;
         }
+        if (query) {
+            const uid = (w.uid || w.userId || "").toLowerCase();
+            const details = (w.payoutDetails || "").toLowerCase();
+            const method = (w.method || "").toLowerCase();
+            const id = (w.id || "").toLowerCase();
+            if (!uid.includes(query) && !details.includes(query) && !method.includes(query) && !id.includes(query)) {
+                return false;
+            }
+        }
+        return true;
+    });
 
-        tbody.innerHTML = list.map(w => `
-            <tr>
-                <td>${formatDt(w.createdAt)}</td>
-                <td><small>${esc(w.uid || w.userId)}</small></td>
-                <td style="font-weight:bold; color:var(--red);">${money(w.amount)}</td>
-                <td><span class="pill">${esc(w.method || "UPI")}</span></td>
-                <td><strong>${esc(w.payoutDetails)}</strong></td>
-                <td><span class="status ${w.status === 'COMPLETED' ? 'active' : (w.status === 'REJECTED' ? '' : 'active')}">${esc(w.status || 'PENDING')}</span></td>
-                <td>
-                    ${w.status === 'PENDING' ? `
-                        <button class="mini approve" data-complete-wd="${w.id}">Complete</button>
-                        <button class="mini decline" data-reject-wd="${w.id}">Reject</button>
-                    ` : '—'}
-                </td>
-            </tr>
-        `).join("");
-
-        document.querySelectorAll("[data-complete-wd]").forEach(b => {
-            b.onclick = () => processWithdrawalAction(b.dataset.completeWd, "COMPLETE");
-        });
-
-        document.querySelectorAll("[data-reject-wd]").forEach(b => {
-            b.onclick = () => processWithdrawalAction(b.dataset.rejectWd, "REJECT");
-        });
-    } catch (e) {
-        if ($("withdrawalsTable")) $("withdrawalsTable").innerHTML = `<tr><td colspan="7">Error: ${esc(e.message)}</td></tr>`;
+    if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px; color:var(--muted);">No matching withdrawal requests.</td></tr>`;
+        return;
     }
+
+    tbody.innerHTML = filtered.map(w => `
+        <tr>
+            <td>${formatDt(w.createdAt)}</td>
+            <td><code style="font-size:12px;">${esc(w.uid || w.userId || "—")}</code></td>
+            <td style="font-weight:bold; color:var(--red); font-size:14px;">${money(w.amount)}</td>
+            <td><span class="pill">${esc(w.method || "UPI")}</span></td>
+            <td><strong style="color:#fff;">${esc(w.payoutDetails || "—")}</strong></td>
+            <td><span class="status ${w.status === 'COMPLETED' ? 'active' : (w.status === 'REJECTED' ? '' : 'active')}">${esc(w.status || 'PENDING')}</span></td>
+            <td>
+                ${w.status === 'PENDING' ? `
+                    <button class="mini approve" data-complete-wd="${w.id}">Complete</button>
+                    <button class="mini decline" data-reject-wd="${w.id}">Reject</button>
+                ` : `<span style="color:var(--muted); font-size:12px;">${esc(w.adminNote || 'Processed')}</span>`}
+            </td>
+        </tr>
+    `).join("");
+
+    document.querySelectorAll("[data-complete-wd]").forEach(b => {
+        b.onclick = () => processWithdrawalAction(b.dataset.completeWd, "COMPLETE");
+    });
+
+    document.querySelectorAll("[data-reject-wd]").forEach(b => {
+        b.onclick = () => processWithdrawalAction(b.dataset.rejectWd, "REJECT");
+    });
 }
 
 async function processWithdrawalAction(wId, action) {
-    const note = prompt(`Enter admin note for this ${action}:`) || "";
+    const note = prompt(`Enter admin note / transaction reference for this ${action}:`) || "";
 
     try {
         const wRef = doc(db, "withdrawals", wId);
@@ -1170,14 +1701,42 @@ async function processWithdrawalAction(wId, action) {
                 }, { merge: true });
 
                 tx.update(wRef, { status: "COMPLETED", adminNote: note, processedAt: serverTimestamp() });
+
+                const txRef = doc(collection(db, "walletTransactions"));
+                tx.set(txRef, {
+                    transactionId: txRef.id,
+                    id: txRef.id,
+                    uid: uid,
+                    userId: uid,
+                    type: "WITHDRAWAL",
+                    amount: amt,
+                    status: "COMPLETED",
+                    referenceId: wId,
+                    description: `Cashout Paid (${esc(wData.method || 'UPI')} - ${note || 'Completed'})`,
+                    createdAt: serverTimestamp()
+                });
             } else {
-                // REJECT: Unlock funds back to available
+                // REJECT: Unlock funds back to available balance
                 tx.set(walRef, {
                     lockedBalance: Math.max(0, locked - amt),
                     updatedAt: serverTimestamp()
                 }, { merge: true });
 
                 tx.update(wRef, { status: "REJECTED", adminNote: note, processedAt: serverTimestamp() });
+
+                const txRef = doc(collection(db, "walletTransactions"));
+                tx.set(txRef, {
+                    transactionId: txRef.id,
+                    id: txRef.id,
+                    uid: uid,
+                    userId: uid,
+                    type: "REFUND",
+                    amount: amt,
+                    status: "COMPLETED",
+                    referenceId: wId,
+                    description: `Cashout Rejected & Refunded (${note || 'Funds unlocked'})`,
+                    createdAt: serverTimestamp()
+                });
             }
         });
 
@@ -1188,32 +1747,226 @@ async function processWithdrawalAction(wId, action) {
     }
 }
 
+$("withdrawSearchInput")?.addEventListener("input", filterAndRenderWithdrawals);
+$("withdrawStatusFilter")?.addEventListener("change", filterAndRenderWithdrawals);
+$("refreshWithdrawalsBtn")?.addEventListener("click", loadWithdrawalsList);
+
 // =========================================================
-// 10. WALLETS AUDIT
+// 10. WALLETS AUDIT & SEARCH
 // =========================================================
+let cachedWalletsList = [];
+
 async function loadWalletsList() {
+    const tbody = $("walletsTable");
+    if (!tbody) return;
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Loading wallet records...</td></tr>`;
+
     try {
         const snap = await getDocs(collection(db, "wallets"));
-        const rows = [];
-        snap.forEach(d => rows.push({ id: d.id, ...d.data() }));
+        cachedWalletsList = [];
+        snap.forEach(d => cachedWalletsList.push({ id: d.id, ...d.data() }));
 
-        const tbody = $("walletsTable");
-        if (!tbody) return;
-
-        tbody.innerHTML = rows.map(w => `
-            <tr>
-                <td><small>${esc(w.id || w.userId)}</small></td>
-                <td style="color:var(--green); font-weight:bold;">${money(w.balance)}</td>
-                <td>${money(w.lockedBalance || 0)}</td>
-                <td>${money(w.totalDeposited || 0)}</td>
-                <td>${money(w.totalWithdrawn || 0)}</td>
-                <td style="color:var(--gold);">${money(w.totalWinnings || 0)}</td>
-            </tr>
-        `).join("");
+        cachedWalletsList.sort((a, b) => Number(b.balance || 0) - Number(a.balance || 0));
+        filterAndRenderWallets();
     } catch (e) {
-        if ($("walletsTable")) $("walletsTable").innerHTML = `<tr><td colspan="6">Error: ${esc(e.message)}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" style="color:var(--red);">Error: ${esc(e.message)}</td></tr>`;
     }
 }
+
+function filterAndRenderWallets() {
+    const tbody = $("walletsTable");
+    if (!tbody) return;
+
+    const query = ($("walletSearchInput")?.value || "").trim().toLowerCase();
+    const filtered = cachedWalletsList.filter(w => {
+        if (!query) return true;
+        const uid = (w.id || w.userId || "").toLowerCase();
+        return uid.includes(query);
+    });
+
+    if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:20px; color:var(--muted);">No matching wallet records found.</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = filtered.map(w => `
+        <tr>
+            <td><code style="font-size:12px;">${esc(w.id || w.userId)}</code></td>
+            <td style="color:var(--green); font-weight:bold; font-size:14px;">${money(w.balance)}</td>
+            <td>${money(w.lockedBalance || 0)}</td>
+            <td>${money(w.totalDeposited || 0)}</td>
+            <td>${money(w.totalWithdrawn || 0)}</td>
+            <td style="color:var(--gold); font-weight:bold;">${money(w.totalWinnings || 0)}</td>
+        </tr>
+    `).join("");
+}
+
+$("walletSearchInput")?.addEventListener("input", filterAndRenderWallets);
+$("refreshWalletsBtn")?.addEventListener("click", loadWalletsList);
+
+// =========================================================
+// 10B. TRANSACTIONS (COMPREHENSIVE FINANCIAL AUDIT TRAIL)
+// =========================================================
+let cachedTransactionsList = [];
+
+async function loadTransactionsList() {
+    const tbody = $("transactionsTable");
+    if (!tbody) return;
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;">Loading full transaction history...</td></tr>`;
+
+    try {
+        const [txSnap, depSnap, wdSnap] = await Promise.all([
+            getDocs(collection(db, "walletTransactions")).catch(() => ({ docs: [] })),
+            getDocs(collection(db, "deposits")).catch(() => ({ docs: [] })),
+            getDocs(collection(db, "withdrawals")).catch(() => ({ docs: [] }))
+        ]);
+
+        const txMap = new Map();
+
+        // 1. Primary wallet transactions
+        txSnap.forEach(d => {
+            txMap.set(d.id, { id: d.id, ...d.data() });
+        });
+
+        // 2. Synthesize completed deposits if not already in walletTransactions
+        depSnap.forEach(d => {
+            const dep = d.data();
+            const txId = dep.transactionId || `dep_${d.id}`;
+            if (!txMap.has(txId) && !txMap.has(d.id)) {
+                txMap.set(txId, {
+                    id: txId,
+                    uid: dep.uid || dep.userId,
+                    type: "DEPOSIT",
+                    amount: dep.amount || 0,
+                    status: dep.status || "COMPLETED",
+                    description: `Razorpay/UPI Deposit (${esc(dep.paymentId || dep.orderId || d.id)})`,
+                    referenceId: dep.paymentId || dep.orderId || d.id,
+                    createdAt: dep.createdAt || dep.processedAt
+                });
+            }
+        });
+
+        // 3. Synthesize withdrawals if not already recorded
+        wdSnap.forEach(d => {
+            const wd = d.data();
+            const txId = wd.transactionId || `wd_${d.id}`;
+            if (!txMap.has(txId) && !txMap.has(d.id)) {
+                txMap.set(txId, {
+                    id: txId,
+                    uid: wd.uid || wd.userId,
+                    type: "WITHDRAWAL",
+                    amount: wd.amount || 0,
+                    status: wd.status || "PENDING",
+                    description: `Cashout Request (${esc(wd.method || "UPI")} - ${esc(wd.payoutDetails || "")})`,
+                    referenceId: d.id,
+                    createdAt: wd.createdAt
+                });
+            }
+        });
+
+        cachedTransactionsList = Array.from(txMap.values());
+        cachedTransactionsList.sort((a, b) => {
+            const timeA = (a.createdAt?.toDate ? a.createdAt.toDate().getTime() : new Date(a.createdAt || 0).getTime()) || 0;
+            const timeB = (b.createdAt?.toDate ? b.createdAt.toDate().getTime() : new Date(b.createdAt || 0).getTime()) || 0;
+            return timeB - timeA;
+        });
+
+        // Compute Financial KPIs
+        let totalDeposits = 0;
+        let totalPrizes = 0;
+        let totalWithdrawals = 0;
+
+        cachedTransactionsList.forEach(t => {
+            const amt = Number(t.amount || 0);
+            const type = (t.type || "").toUpperCase();
+            const isCompleted = (t.status || "COMPLETED").toUpperCase() === "COMPLETED";
+
+            if (isCompleted) {
+                if (type.includes("DEP")) totalDeposits += amt;
+                else if (type.includes("PRIZE") || type.includes("WIN")) totalPrizes += amt;
+                else if (type.includes("WITHDRAW")) totalWithdrawals += amt;
+            }
+        });
+
+        if ($("statTxTotal")) $("statTxTotal").textContent = cachedTransactionsList.length;
+        if ($("statTxInflow")) $("statTxInflow").textContent = money(totalDeposits);
+        if ($("statTxPrizes")) $("statTxPrizes").textContent = money(totalPrizes);
+        if ($("statTxWithdrawals")) $("statTxWithdrawals").textContent = money(totalWithdrawals);
+
+        filterAndRenderTransactions();
+    } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="7" style="color:var(--red);">Error loading transactions: ${esc(e.message)}</td></tr>`;
+    }
+}
+
+function filterAndRenderTransactions() {
+    const tbody = $("transactionsTable");
+    if (!tbody) return;
+
+    const query = ($("txSearchInput")?.value || "").trim().toLowerCase();
+    const typeFilter = $("txTypeFilter")?.value || "all";
+    const statusFilter = $("txStatusFilter")?.value || "all";
+
+    const filtered = cachedTransactionsList.filter(t => {
+        const type = (t.type || "").toUpperCase();
+        const status = (t.status || "COMPLETED").toUpperCase();
+
+        if (typeFilter !== "all") {
+            if (typeFilter === "DEPOSIT" && !type.includes("DEP")) return false;
+            if (typeFilter === "MATCH_JOIN" && !type.includes("JOIN") && !type.includes("ENTRY")) return false;
+            if (typeFilter === "PRIZE_WIN" && !type.includes("PRIZE") && !type.includes("WIN")) return false;
+            if (typeFilter === "WITHDRAWAL" && !type.includes("WITHDRAW")) return false;
+            if (typeFilter === "REFUND" && !type.includes("REFUND")) return false;
+        }
+
+        if (statusFilter !== "all" && status !== statusFilter) {
+            return false;
+        }
+
+        if (query) {
+            const uid = (t.uid || t.userId || "").toLowerCase();
+            const desc = (t.description || "").toLowerCase();
+            const ref = (t.referenceId || t.id || "").toLowerCase();
+            if (!uid.includes(query) && !desc.includes(query) && !ref.includes(query)) {
+                return false;
+            }
+        }
+
+        return true;
+    });
+
+    if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:24px; color:var(--muted);">No matching transaction records found.</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = filtered.map(t => {
+        const type = (t.type || "TRANSACTION").toUpperCase();
+        const isCredit = type.includes("DEP") || type.includes("PRIZE") || type.includes("WIN") || type.includes("REFUND");
+        const amtColor = isCredit ? "var(--green)" : "var(--red)";
+        const amtSign = isCredit ? "+" : "-";
+        const status = (t.status || "COMPLETED").toUpperCase();
+        const statusClass = status === "COMPLETED" ? "active" : "";
+
+        return `
+            <tr>
+                <td>${formatDt(t.createdAt)}</td>
+                <td><code style="font-size:12px;">${esc(t.uid || t.userId || "—")}</code></td>
+                <td><span class="pill">${esc(type)}</span></td>
+                <td style="font-weight:bold; color:${amtColor}; font-size:14px;">${amtSign}${money(t.amount)}</td>
+                <td><strong>${esc(t.description || "Wallet Adjustment")}</strong></td>
+                <td><code style="font-size:11px;">${esc(t.referenceId || t.id || "—")}</code></td>
+                <td><span class="status ${statusClass}">${esc(status)}</span></td>
+            </tr>
+        `;
+    }).join("");
+}
+
+$("txSearchInput")?.addEventListener("input", filterAndRenderTransactions);
+$("txTypeFilter")?.addEventListener("change", filterAndRenderTransactions);
+$("txStatusFilter")?.addEventListener("change", filterAndRenderTransactions);
+$("refreshTxBtn")?.addEventListener("click", loadTransactionsList);
+
 
 // =========================================================
 // 11. NOTIFICATIONS
@@ -1496,14 +2249,17 @@ async function loadAppSettings() {
         if ($("settingMaintenance")) $("settingMaintenance").checked = d.maintenance === true;
         if ($("settingAnnouncement")) $("settingAnnouncement").value = d.announcement || "";
         if ($("settingVersion")) $("settingVersion").value = d.version || "1.0.0";
+        if ($("settingWhatsappLink")) $("settingWhatsappLink").value = d.whatsappLink || "https://chat.whatsapp.com/F3m1XBWHgFu7iKHVodNGBD?s=sh&p=a&mlu=4&ilr=4";
     }
 }
 
 $("saveAppSettingsBtn")?.addEventListener("click", async () => {
+    const waLink = $("settingWhatsappLink")?.value.trim() || "https://chat.whatsapp.com/F3m1XBWHgFu7iKHVodNGBD?s=sh&p=a&mlu=4&ilr=4";
     await setDoc(doc(db, "appSettings", "config"), {
         maintenance: $("settingMaintenance").checked,
         announcement: $("settingAnnouncement").value.trim(),
         version: $("settingVersion").value.trim(),
+        whatsappLink: waLink,
         updatedAt: serverTimestamp()
     }, { merge: true });
     toast("App settings saved.");
