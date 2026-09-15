@@ -338,7 +338,7 @@ export async function renderHome() {
                         </div>
                     </div>
                     <div class="app-download-preview">
-                        <img src="assets/logo.png" alt="Elite X Gamers Official Logo" class="app-download-logo">
+                        <img src="assets/logo.png" alt="Elite X Gamers Official Logo" class="app-download-logo" width="90" height="90" style="width:90px !important; height:90px !important; max-width:90px !important; max-height:90px !important; object-fit:cover !important; border-radius:18px !important; display:inline-block !important; margin-bottom:16px !important;">
                         <h3 style="margin:0 0 6px; font-size:20px;">Elite X Gamers</h3>
                         <span class="pill" style="border-color:var(--green); color:var(--green); font-size:11px;">v1.0.0 • PRODUCTION READY</span>
                         <p style="color:var(--muted); font-size:12px; margin:12px 0 16px; line-height:1.5;">
