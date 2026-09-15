@@ -41,6 +41,51 @@ const formatDt = v => {
     return Number.isNaN(d.getTime()) ? String(v) : d.toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
 };
 
+/**
+ * Resolves tournament start time in milliseconds from various possible formats.
+ */
+export function getTournamentStartTimeMs(t) {
+    if (!t) return 0;
+    const v = t.startTime || t.matchTime || t.date || t.matchDate;
+    if (!v) return 0;
+    if (typeof v?.toMillis === "function") return v.toMillis();
+    if (typeof v?.toDate === "function") return v.toDate().getTime();
+    if (v.seconds) return Number(v.seconds) * 1000;
+    if (typeof v === "number") {
+        return v < 100000000000 ? v * 1000 : v;
+    }
+    const parsed = Date.parse(v);
+    return Number.isNaN(parsed) ? 0 : parsed;
+}
+
+/**
+ * Checks whether a tournament has passed and must be removed from the user section.
+ * Rule: Tournaments whose match time or completion time passed more than 12 hours ago
+ * are removed from the user section (Home, Tournaments lobby, Active Dashboard, My Matches).
+ * Admin section is untouched and retains full lifetime history.
+ */
+export function isTournamentExpiredForUser(t, cutoffHours = 12) {
+    if (!t) return true;
+    const now = Date.now();
+    const cutoffMs = cutoffHours * 60 * 60 * 1000;
+    const startMs = getTournamentStartTimeMs(t);
+    const status = (t.status || "").toLowerCase().trim();
+    const isCompletedOrClosed = status === "completed" || status === "cancelled" || status === "canceled" || status === "closed" || t.resultsPublished === true;
+    const isTimePassed = startMs > 0 && now >= startMs;
+
+    if (isCompletedOrClosed || isTimePassed) {
+        if (startMs > 0) {
+            return now >= (startMs + cutoffMs);
+        }
+        const altTime = t.completedAt ? (t.completedAt.toMillis ? t.completedAt.toMillis() : Date.parse(t.completedAt) || 0) : (t.createdAt ? (t.createdAt.toMillis ? t.createdAt.toMillis() : Date.parse(t.createdAt) || 0) : 0);
+        if (altTime > 0) {
+            return now >= (altTime + cutoffMs);
+        }
+        return true;
+    }
+    return false;
+}
+
 export function showToast(msg, isError = false) {
     const t = $("toast");
     if (!t) return;
@@ -88,6 +133,7 @@ export function initAuth() {
             state.userProfile = null;
         }
         router.handleRoute();
+        syncGlobalAppSettings();
     });
 
     // Mobile drawer toggle
@@ -104,6 +150,33 @@ export function initAuth() {
     // Logout actions
     $("logoutBtn")?.addEventListener("click", () => handleLogout());
     $("mobileLogoutBtn")?.addEventListener("click", () => handleLogout());
+
+    syncGlobalAppSettings();
+}
+
+export async function syncGlobalAppSettings() {
+    try {
+        const snap = await getDoc(doc(db, "appSettings", "config"));
+        if (!snap.exists()) return;
+        const d = snap.data();
+        const apkUrl = d.apkDownloadUrl || "downloads/elitexgamers.apk";
+        const waLink = d.whatsappLink || "https://chat.whatsapp.com/F3m1XBWHgFu7iKHVodNGBD?s=sh&p=a&mlu=4&ilr=4";
+
+        document.querySelectorAll('a[href*="elitexgamers.apk"], a[download="EliteXGamers.apk"]').forEach(el => {
+            el.href = apkUrl;
+            if (!apkUrl.startsWith("http")) {
+                el.setAttribute("download", "EliteXGamers.apk");
+            } else {
+                el.removeAttribute("download");
+                el.target = "_blank";
+                el.rel = "noopener noreferrer";
+            }
+        });
+
+        document.querySelectorAll('a[href*="chat.whatsapp.com"]').forEach(el => {
+            el.href = waLink;
+        });
+    } catch (_) {}
 }
 
 async function handleLogout() {
@@ -355,6 +428,7 @@ export async function renderHome() {
 
     loadHeroBanners();
     loadHomeTournaments();
+    syncGlobalAppSettings();
 }
 
 async function loadHeroBanners() {
@@ -406,14 +480,36 @@ async function loadHomeTournaments() {
     try {
         const snap = await getDocs(collection(db, "tournaments"));
         const list = [];
-        snap.forEach(d => list.push({ id: d.id, ...d.data() }));
+        const now = Date.now();
+        snap.forEach(d => {
+            const t = { id: d.id, ...d.data() };
+            // Remove matches from user section after 12 hours
+            if (isTournamentExpiredForUser(t, 12)) return;
+            
+            const startMs = getTournamentStartTimeMs(t);
+            const rawStatus = (t.status || "").toLowerCase().trim();
+            const isCompleted = rawStatus === "completed" || t.resultsPublished === true;
+            const isCancelled = rawStatus === "cancelled" || rawStatus === "canceled";
+
+            // For Home Page upcoming matches: exclude completed/cancelled or matches started > 2 hours ago
+            if (!isCompleted && !isCancelled) {
+                if (startMs === 0 || now < (startMs + 2 * 60 * 60 * 1000)) {
+                    list.push(t);
+                }
+            }
+        });
 
         const grid = $("homeTournamentsGrid");
         if (!grid) return;
 
-        const upcoming = list
-            .filter(t => (t.status || "").toLowerCase() !== "completed" && (t.status || "").toLowerCase() !== "cancelled")
-            .slice(0, 6);
+        // Sort upcoming matches by start time (soonest first)
+        list.sort((a, b) => {
+            const aTime = getTournamentStartTimeMs(a) || Number.MAX_SAFE_INTEGER;
+            const bTime = getTournamentStartTimeMs(b) || Number.MAX_SAFE_INTEGER;
+            return aTime - bTime;
+        });
+
+        const upcoming = list.slice(0, 6);
 
         if ($("statActiveTourneys")) $("statActiveTourneys").textContent = upcoming.length + "+";
 
@@ -437,11 +533,37 @@ function renderTournamentCardHtml(t) {
     const perKill = t.perKillCoins ?? t.perKill ?? t.killPoint ?? 0;
     const mode = is1v1 ? "1v1 Match" : (t.mode || "Solo");
 
+    const now = Date.now();
+    const startMs = getTournamentStartTimeMs(t);
+    const rawStatus = (t.status || "").toLowerCase().trim();
+    const isCompleted = rawStatus === "completed" || t.resultsPublished === true;
+    const isCancelled = rawStatus === "cancelled" || rawStatus === "canceled";
+    const isTimePassed = startMs > 0 && now >= startMs;
+    const isLive = !isCompleted && !isCancelled && (rawStatus === "live" || rawStatus === "started" || (isTimePassed && now <= startMs + 2 * 60 * 60 * 1000));
+    const isConcluded = isCompleted || (isTimePassed && !isLive);
+
+    let statusBadge = `<span class="status">${esc(t.status || 'UPCOMING').toUpperCase()}</span>`;
+    let actionBtn = `<a href="#/tournaments/${t.id}" class="btn btn-sm btn-primary">${is1v1 ? 'Join 1v1 Duel' : 'Join Match'}</a>`;
+
+    if (isCancelled) {
+        statusBadge = `<span class="status" style="border-color:var(--red); color:var(--red);">CANCELLED</span>`;
+        actionBtn = `<span class="pill" style="color:var(--red); border-color:var(--red);">Match Cancelled</span>`;
+    } else if (isCompleted) {
+        statusBadge = `<span class="status active">COMPLETED</span>`;
+        actionBtn = `<a href="#/results/${t.id}" class="btn btn-sm btn-secondary">View Results →</a>`;
+    } else if (isLive) {
+        statusBadge = `<span class="status active" style="border-color:var(--green); color:var(--green);">● LIVE NOW</span>`;
+        actionBtn = `<a href="#/tournaments/${t.id}" class="btn btn-sm btn-primary" style="background:var(--green); color:#000;">Room Details 🔓</a>`;
+    } else if (isConcluded) {
+        statusBadge = `<span class="status" style="border-color:var(--muted); color:var(--muted);">CONCLUDED</span>`;
+        actionBtn = `<a href="#/tournaments/${t.id}" class="btn btn-sm btn-secondary">Match Ended</a>`;
+    }
+
     return `
         <article class="tournament-card">
             <div class="tournament-card-top">
                 <span class="tournament-game">${esc(t.game || "Free Fire")} • ${esc(mode)}</span>
-                <span class="status ${t.status === 'live' ? 'active' : ''}">${esc(t.status || 'UPCOMING').toUpperCase()}</span>
+                ${statusBadge}
             </div>
             <h3>${esc(t.name || "Tournament")}</h3>
             <div class="tournament-details">
@@ -469,7 +591,7 @@ function renderTournamentCardHtml(t) {
             </div>
             <div class="card-footer-action">
                 <span class="match-time">⏰ ${formatDt(t.startTime || t.date)}</span>
-                <a href="#/tournaments/${t.id}" class="btn btn-sm btn-primary">${is1v1 ? 'Join 1v1 Duel' : 'Join Match'}</a>
+                ${actionBtn}
             </div>
         </article>
     `;
@@ -786,6 +908,12 @@ async function loadDashboardMatches() {
 
         for (const docSnap of snap.docs) {
             const tData = { id: docSnap.id, ...docSnap.data() };
+            // Remove tournaments older than 12 hours
+            if (isTournamentExpiredForUser(tData, 12)) continue;
+
+            const rawStatus = (tData.status || "").toLowerCase().trim();
+            if (rawStatus === "completed" || rawStatus === "cancelled" || rawStatus === "canceled") continue;
+
             // Check if user is in entries
             const entrySnap = await getDoc(doc(db, "tournaments", docSnap.id, "entries", uid));
             if (entrySnap.exists()) {
@@ -865,11 +993,32 @@ export async function renderTournaments(params, query) {
 let cachedTournaments = [];
 async function loadTournamentsList(modeFilter) {
     try {
-        if (cachedTournaments.length === 0) {
-            const snap = await getDocs(collection(db, "tournaments"));
-            cachedTournaments = [];
-            snap.forEach(d => cachedTournaments.push({ id: d.id, ...d.data() }));
-        }
+        const snap = await getDocs(collection(db, "tournaments"));
+        cachedTournaments = [];
+        snap.forEach(d => {
+            const t = { id: d.id, ...d.data() };
+            // Remove matches from user section after 12 hours
+            if (!isTournamentExpiredForUser(t, 12)) {
+                cachedTournaments.push(t);
+            }
+        });
+
+        // Sort: Active & upcoming first (soonest start), concluded matches at the bottom
+        const now = Date.now();
+        cachedTournaments.sort((a, b) => {
+            const aTime = getTournamentStartTimeMs(a);
+            const bTime = getTournamentStartTimeMs(b);
+            const aPassed = (aTime > 0 && aTime < now) || (a.status || "").toLowerCase() === "completed";
+            const bPassed = (bTime > 0 && bTime < now) || (b.status || "").toLowerCase() === "completed";
+
+            if (aPassed !== bPassed) {
+                return aPassed ? 1 : -1;
+            }
+            if (!aPassed) {
+                return (aTime || Number.MAX_SAFE_INTEGER) - (bTime || Number.MAX_SAFE_INTEGER);
+            }
+            return bTime - aTime;
+        });
 
         const q = ($("tourneySearch")?.value || "").toLowerCase().trim();
         const filtered = cachedTournaments.filter(t => {
@@ -931,6 +1080,24 @@ export async function renderTournamentDetails(params) {
         }
 
         const t = { id: snap.id, ...snap.data() };
+        
+        // Remove from user section if concluded more than 12 hours ago
+        if (isTournamentExpiredForUser(t, 12)) {
+            app.innerHTML = `
+                <div class="container section">
+                    <div class="empty-state-card">
+                        <h3>Match Concluded & Archived</h3>
+                        <p>This tournament concluded more than 12 hours ago and is archived from the user lobby.</p>
+                        <div style="display:flex; justify-content:center; gap:12px; margin-top:16px;">
+                            <a href="#/tournaments" class="btn btn-primary">Browse Active Tournaments</a>
+                            <a href="#/results" class="btn btn-secondary">Check Results Archive</a>
+                        </div>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
         const is1v1 = (t.mode || "").toLowerCase().includes("1v1") || (t.mode || "").toLowerCase().includes("lone") || t.format === "1v1" || t.format === "LONE_WOLF" || Number(t.slots ?? t.totalSlots) === 2;
         const slots = is1v1 ? 2 : Number(t.slots ?? t.totalSlots ?? 48);
         const joined = Number(t.joinedSlots ?? t.currentSlots ?? 0);
@@ -939,6 +1106,41 @@ export async function renderTournamentDetails(params) {
         const perKill = Number(t.perKillCoins ?? t.perKill ?? 0);
         const isFull = joined >= slots && slots > 0;
         const mode = is1v1 ? "1v1 Match" : (t.mode || "Solo");
+
+        const now = Date.now();
+        const startMs = getTournamentStartTimeMs(t);
+        const rawStatus = (t.status || "").toLowerCase().trim();
+        const isCompleted = rawStatus === "completed" || t.resultsPublished === true;
+        const isCancelled = rawStatus === "cancelled" || rawStatus === "canceled";
+        const isTimePassed = startMs > 0 && now >= startMs;
+        const isLive = !isCompleted && !isCancelled && (rawStatus === "live" || rawStatus === "started" || (isTimePassed && now <= startMs + 2 * 60 * 60 * 1000));
+        const isRegistrationClosed = isCompleted || isCancelled || (isTimePassed && !isLive);
+
+        let statusText = esc(t.status || 'UPCOMING').toUpperCase();
+        let statusClass = t.status === 'live' ? 'active' : '';
+        if (isCancelled) {
+            statusText = "CANCELLED";
+            statusClass = "error";
+        } else if (isCompleted) {
+            statusText = "COMPLETED";
+            statusClass = "active";
+        } else if (isLive) {
+            statusText = "● LIVE NOW";
+            statusClass = "active";
+        } else if (isRegistrationClosed) {
+            statusText = "CONCLUDED";
+        }
+
+        let joinActionHtml = `<button id="openJoinModalBtn" class="btn btn-primary">REGISTER FOR TOURNAMENT</button>`;
+        if (isCancelled) {
+            joinActionHtml = `<button class="btn btn-secondary" disabled style="color:var(--red);">MATCH CANCELLED</button>`;
+        } else if (isCompleted) {
+            joinActionHtml = `<a href="#/results/${t.id}" class="btn btn-secondary">VIEW MATCH RESULTS →</a>`;
+        } else if (isRegistrationClosed) {
+            joinActionHtml = `<button class="btn btn-secondary" disabled>MATCH CONCLUDED (CLOSED)</button>`;
+        } else if (isFull) {
+            joinActionHtml = `<button class="btn btn-secondary" disabled>LOBBY FULL</button>`;
+        }
 
         app.innerHTML = `
             <div class="container section">
@@ -951,7 +1153,7 @@ export async function renderTournamentDetails(params) {
                         <p style="color:var(--muted); max-width:640px;">${esc(t.description || (is1v1 ? "Direct 2-player 1v1 duel. Winner takes the full champion payout." : "Compete against top players in this verified Battle Royale match."))}</p>
                     </div>
                     <div class="detail-badge-box">
-                        <span class="status ${t.status === 'live' ? 'active' : ''}">${esc(t.status || 'UPCOMING').toUpperCase()}</span>
+                        <span class="status ${statusClass}">${statusText}</span>
                         <div style="margin-top:14px;">
                             <strong style="font-size:26px; color:var(--gold);">${money(prize)}</strong>
                             <small style="display:block; color:var(--muted);">${is1v1 ? 'Winner Payout' : 'Total Prize Pool'}</small>
@@ -984,10 +1186,7 @@ export async function renderTournamentDetails(params) {
 
                 <!-- Room Credentials Section -->
                 ${(() => {
-                    const startMs = (t.startTime?.toDate ? t.startTime.toDate().getTime() : new Date(t.startTime || t.date || 0).getTime()) || 0;
                     const isNearStart = startMs > 0 && (startMs - Date.now()) <= 15 * 60 * 1000;
-                    const isLive = (t.status || "").toLowerCase() === "live" || (t.status || "").toLowerCase() === "started";
-                    const isCompleted = (t.status || "").toLowerCase() === "completed" || t.resultsPublished === true;
                     const isExplicitlyReleased = t.roomReleased === true || t.roomReleased === "true" || t.releaseRoomDetails === true || t.releaseRoomDetails === "true";
                     const hasRoomId = Boolean(t.roomId && String(t.roomId).trim() !== "" && String(t.roomId).trim() !== "—");
                     const isRoomUnlocked = isCompleted || isExplicitlyReleased || (hasRoomId && (isNearStart || isLive));
@@ -1073,10 +1272,7 @@ export async function renderTournamentDetails(params) {
                         <span style="color:var(--muted); font-size:13px;">Entry fee: ${money(fee)} (Deducted from available wallet balance)</span>
                     </div>
                     <div>
-                        ${isFull 
-                            ? `<button class="btn btn-secondary" disabled>LOBBY FULL</button>` 
-                            : `<button id="openJoinModalBtn" class="btn btn-primary">REGISTER FOR TOURNAMENT</button>`
-                        }
+                        ${joinActionHtml}
                     </div>
                 </div>
             </div>
@@ -1092,6 +1288,18 @@ function openJoinTournamentModal(t) {
     if (!state.currentUser) {
         showToast("Please sign in to register for tournaments.", true);
         router.navigate("/login");
+        return;
+    }
+
+    const now = Date.now();
+    const startMs = getTournamentStartTimeMs(t);
+    const rawStatus = (t.status || "").toLowerCase().trim();
+    const isCompleted = rawStatus === "completed" || t.resultsPublished === true;
+    const isCancelled = rawStatus === "cancelled" || rawStatus === "canceled";
+    const isTimePassed = startMs > 0 && now >= startMs;
+
+    if (isCompleted || isCancelled || isTimePassed) {
+        showToast("Registration is closed. This match has already started or concluded.", true);
         return;
     }
 
@@ -1296,6 +1504,9 @@ async function loadMyMatchesList(tab) {
 
         for (const docSnap of snap.docs) {
             const tData = docSnap.data();
+            // Remove matches from user section after 12 hours
+            if (isTournamentExpiredForUser(tData, 12)) continue;
+
             let entry = null;
             let myResult = null;
 
@@ -1329,21 +1540,24 @@ async function loadMyMatchesList(tab) {
             }
         }
 
-        // Sort descending by match date (ensuring matches from 1 month ago are listed properly)
+        // Sort descending by match date
         matches.sort((a, b) => {
-            const timeA = (a.startTime?.toDate ? a.startTime.toDate().getTime() : new Date(a.startTime || a.date || 0).getTime()) || 0;
-            const timeB = (b.startTime?.toDate ? b.startTime.toDate().getTime() : new Date(b.startTime || b.date || 0).getTime()) || 0;
+            const timeA = getTournamentStartTimeMs(a);
+            const timeB = getTournamentStartTimeMs(b);
             return timeB - timeA;
         });
 
+        const now = Date.now();
         const filtered = matches.filter(t => {
-            const s = (t.status || "upcoming").toLowerCase();
-            const startMs = (t.startTime?.toDate ? t.startTime.toDate().getTime() : new Date(t.startTime || t.date || 0).getTime()) || 0;
+            if (isTournamentExpiredForUser(t, 12)) return false;
+
+            const s = (t.status || "upcoming").toLowerCase().trim();
+            const startMs = getTournamentStartTimeMs(t);
             const isCompleted = s === "completed" || s === "cancelled" || s === "canceled" || t.resultsPublished === true;
 
             if (tab === "completed") return isCompleted;
-            if (tab === "live") return !isCompleted && (s === "live" || s === "started" || s === "in_progress" || (startMs > 0 && startMs <= Date.now()));
-            if (tab === "upcoming") return !isCompleted && (s === "upcoming" || s === "open" || s === "registration_open" || s === "starting_soon" || (startMs > Date.now() || startMs === 0));
+            if (tab === "live") return !isCompleted && (s === "live" || s === "started" || s === "in_progress" || (startMs > 0 && startMs <= now && now <= startMs + 2 * 60 * 60 * 1000));
+            if (tab === "upcoming") return !isCompleted && (s === "upcoming" || s === "open" || s === "registration_open" || s === "starting_soon" || startMs > now || startMs === 0);
             return true;
         });
 
