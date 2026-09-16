@@ -27,7 +27,10 @@ import {
   runTransaction,
   onSnapshot,
   increment
-} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+import {
+  getFunctions,
+  httpsCallable
+} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-functions.js";
 
 // Canonical Firebase project configuration for elitexgamers-17353
 const firebaseConfig = {
@@ -43,6 +46,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const functions = getFunctions(app);
 
 // Public Razorpay Key ID
 const RAZORPAY_KEY_ID = "rzp_live_TbxTWY1CD6udie";
@@ -51,6 +55,8 @@ export {
   app,
   auth,
   db,
+  functions,
+  httpsCallable,
   onAuthStateChanged,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
