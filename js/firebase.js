@@ -27,6 +27,7 @@ import {
   runTransaction,
   onSnapshot,
   increment
+} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 import {
   getFunctions,
   httpsCallable
