@@ -233,7 +233,11 @@ service cloud.firestore {
 
     // SSO Tokens (short lived, single use)
     match /ssoTokens/{tokenId} {
-      allow read, write: if signedIn();
+      // Direct client reading is disabled; only backend/Cloud Functions with Admin SDK verify tokens
+      allow read: if false;
+      // Authenticated users can only create SSO handoff tokens strictly for their own UID
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if isAdmin();
     }
   }
 }

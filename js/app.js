@@ -4,6 +4,7 @@
  */
 
 import { router } from "./router.js";
+import { requireAuth } from "./auth.js";
 import {
     initAuth,
     renderHome,
@@ -25,6 +26,15 @@ import {
     renderSettings
 } from "./portal.js";
 
+// Guard protected routes via centralized auth bootstrap
+router.beforeEach(async (matched) => {
+    if (matched.isProtected) {
+        const user = await requireAuth(matched.pattern);
+        if (!user) return false;
+    }
+    return true;
+});
+
 // Register All Canonical Routes
 router.add("/", () => renderHome());
 router.add("/login", () => renderLogin());
@@ -45,6 +55,7 @@ router.add("/notifications", () => renderNotifications(), true);
 router.add("/support", (params) => renderSupport(params));
 router.add("/support/:id", (params) => renderSupport(params));
 router.add("/profile", () => renderProfile(), true);
+router.add("/referrals", () => renderProfile(), true);
 router.add("/settings", () => renderSettings());
 
 // Boot Auth & Router

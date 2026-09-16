@@ -30,6 +30,8 @@ import {
     RAZORPAY_KEY_ID
 } from "./firebase.js";
 import { router } from "./router.js";
+import { requireAuth, waitForAuthReady, logoutWeb } from "./auth.js";
+import { processSsoToken } from "./sso.js";
 
 // Utility helpers
 const $ = id => document.getElementById(id);
@@ -180,7 +182,7 @@ export async function syncGlobalAppSettings() {
 }
 
 async function handleLogout() {
-    await signOut(auth);
+    await logoutWeb();
     showToast("Signed out successfully.");
     router.navigate("/");
 }
@@ -809,44 +811,57 @@ export function renderRegister(query = {}) {
 // =========================================================
 export async function renderSso(params, query) {
     const app = $("appContainer");
-    const token = query.token;
+    const token = (query && query.token) ? query.token.trim() : "";
+    const requestedDest = (query && query.dest) ? query.dest.trim() : "/wallet";
+
     app.innerHTML = `
         <div class="login-wrap">
-            <div class="login-box" style="text-align:center;">
-                <div class="spinner"></div>
-                <h2 style="margin:18px 0 6px;">Authenticating Session...</h2>
-                <p>Logging you in from your mobile app session.</p>
-                <p id="ssoError" class="error"></p>
+            <div class="login-box" style="text-align:center; max-width:440px; padding:36px 28px;">
+                <div id="ssoSpinner" class="spinner" style="margin:0 auto 16px;"></div>
+                <h2 id="ssoHeading" style="margin:0 0 8px; font-size:22px;">Authenticating Session...</h2>
+                <p id="ssoSubtitle" style="color:var(--muted); font-size:14px; margin-bottom:20px;">
+                    Connecting your Elite X Gamers mobile app session securely.
+                </p>
+                <div id="ssoErrorBox" class="hidden" style="margin-top:16px;">
+                    <p id="ssoError" class="error" style="background:rgba(233,30,43,0.1); border:1px solid var(--primary); padding:12px; border-radius:8px; font-size:14px; margin-bottom:16px;"></p>
+                    <div style="display:flex; gap:10px; justify-content:center;">
+                        <a href="#/login" class="btn btn-secondary" style="font-size:13px;">Login with Email</a>
+                        <a href="#/" class="btn btn-primary" style="font-size:13px;">Return to Home</a>
+                    </div>
+                </div>
             </div>
         </div>
     `;
 
     if (!token) {
-        $("ssoError").textContent = "Missing SSO authentication token.";
+        $("ssoSpinner")?.classList.add("hidden");
+        $("ssoHeading").textContent = "Authentication Required";
+        $("ssoSubtitle").textContent = "No single sign-on token was provided.";
+        $("ssoErrorBox")?.classList.remove("hidden");
+        $("ssoError").textContent = "Unable to sign you in automatically. Please launch from the Elite X Gamers mobile app.";
         return;
     }
 
     try {
-        const tokenRef = doc(db, "ssoTokens", token);
-        const tokenSnap = await getDoc(tokenRef);
-        if (!tokenSnap.exists()) {
-            throw new Error("Invalid or expired single sign-on token.");
+        const result = await processSsoToken(token);
+
+        if (!result.success) {
+            $("ssoSpinner")?.classList.add("hidden");
+            $("ssoHeading").textContent = "Authentication Failed";
+            $("ssoSubtitle").textContent = "Unable to sign you in automatically.";
+            $("ssoErrorBox")?.classList.remove("hidden");
+            $("ssoError").textContent = result.error || "Unable to sign you in automatically. Please try again.";
+            return;
         }
 
-        const data = tokenSnap.data() || {};
-        if (Date.now() > Number(data.expiresAt || 0)) {
-            await setDoc(tokenRef, { expired: true });
-            throw new Error("Single sign-on token has expired. Please launch from the app again.");
-        }
-
-        // Delete used token (one-time use)
-        await setDoc(tokenRef, { used: true });
-
-        // If backend custom token is supported, we sign in; otherwise we notify user
         showToast("Authenticated successfully!");
-        router.navigate("/dashboard");
+        const target = result.destination || requestedDest || "/wallet";
+        router.navigate(target);
     } catch (e) {
-        if ($("ssoError")) $("ssoError").textContent = e.message;
+        $("ssoSpinner")?.classList.add("hidden");
+        $("ssoHeading").textContent = "Authentication Error";
+        $("ssoErrorBox")?.classList.remove("hidden");
+        $("ssoError").textContent = e.message || "An unexpected error occurred.";
     }
 }
 
@@ -854,10 +869,8 @@ export async function renderSso(params, query) {
 // VIEW: DASHBOARD (/dashboard)
 // =========================================================
 export async function renderDashboard() {
-    if (!state.currentUser) {
-        router.navigate("/login");
-        return;
-    }
+    const user = await requireAuth("/dashboard");
+    if (!user) return;
 
     const app = $("appContainer");
     const availBal = Math.max(0, (state.wallet.balance || 0) - (state.wallet.lockedBalance || 0));
@@ -1506,10 +1519,8 @@ function openJoinTournamentModal(t) {
 // VIEW: MY MATCHES (/my-matches)
 // =========================================================
 export async function renderMyMatches(params, query) {
-    if (!state.currentUser) {
-        router.navigate("/login");
-        return;
-    }
+    const user = await requireAuth("/my-matches");
+    if (!user) return;
 
     const app = $("appContainer");
     const activeTab = query.tab || "upcoming";
@@ -1719,11 +1730,9 @@ function renderMyMatchCard(t, isCompletedTab = false) {
 // =========================================================
 // VIEW: WALLET (/wallet), DEPOSIT (/deposit), WITHDRAW (/withdraw)
 // =========================================================
-export function renderWallet() {
-    if (!state.currentUser) {
-        router.navigate("/login");
-        return;
-    }
+export async function renderWallet() {
+    const user = await requireAuth("/wallet");
+    if (!user) return;
 
     const app = $("appContainer");
     const bal = state.wallet.balance || 0;
@@ -1888,11 +1897,9 @@ async function loadWalletOverviewLedger() {
     }
 }
 
-export function renderDeposit() {
-    if (!state.currentUser) {
-        router.navigate("/login");
-        return;
-    }
+export async function renderDeposit() {
+    const user = await requireAuth("/deposit");
+    if (!user) return;
 
     const app = $("appContainer");
     app.innerHTML = `
@@ -2038,11 +2045,9 @@ async function initiateRazorpayDeposit(amount) {
     rzp.open();
 }
 
-export function renderWithdraw() {
-    if (!state.currentUser) {
-        router.navigate("/login");
-        return;
-    }
+export async function renderWithdraw() {
+    const user = await requireAuth("/withdraw");
+    if (!user) return;
 
     const app = $("appContainer");
     const bal = state.wallet.balance || 0;
@@ -2178,10 +2183,8 @@ export function renderWithdraw() {
 // VIEW: TRANSACTIONS (/transactions)
 // =========================================================
 export async function renderTransactions() {
-    if (!state.currentUser) {
-        router.navigate("/login");
-        return;
-    }
+    const user = await requireAuth("/transactions");
+    if (!user) return;
 
     const app = $("appContainer");
     app.innerHTML = `
@@ -2508,10 +2511,8 @@ async function renderSingleTournamentResult(id) {
 // VIEW: NOTIFICATIONS (/notifications)
 // =========================================================
 export async function renderNotifications() {
-    if (!state.currentUser) {
-        router.navigate("/login");
-        return;
-    }
+    const user = await requireAuth("/notifications");
+    if (!user) return;
 
     const app = $("appContainer");
     app.innerHTML = `
@@ -2872,11 +2873,9 @@ async function renderTicketChat(ticketId) {
 // =========================================================
 // VIEW: PROFILE (/profile)
 // =========================================================
-export function renderProfile() {
-    if (!state.currentUser) {
-        router.navigate("/login");
-        return;
-    }
+export async function renderProfile() {
+    const user = await requireAuth("/profile");
+    if (!user) return;
 
     const app = $("appContainer");
     const u = state.userProfile || {};
