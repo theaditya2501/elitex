@@ -44,9 +44,18 @@ export function onAuthChange(listener) {
  * Prevents flashing or premature redirection on page refreshes.
  */
 export async function waitForAuthReady() {
+    if (auth.currentUser) {
+        authState.currentUser = auth.currentUser;
+        if (!authReadyResolved) {
+            authReadyResolved = true;
+            authState.isReady = true;
+            if (authReadyResolver) authReadyResolver(auth.currentUser);
+        }
+        return auth.currentUser;
+    }
     if (authReadyResolved) return authState.currentUser;
     await authReadyPromise;
-    return authState.currentUser;
+    return auth.currentUser || authState.currentUser;
 }
 
 /**
@@ -64,6 +73,9 @@ export function getCurrentUser() {
  * If unauthenticated, safely redirects to /login while preserving destination.
  */
 export async function requireAuth(targetRoute = window.location.hash.replace(/^#/, "") || "/wallet") {
+    if (auth.currentUser) {
+        return auth.currentUser;
+    }
     await waitForAuthReady();
     const user = getCurrentUser();
 
@@ -84,7 +96,7 @@ export async function requireAuth(targetRoute = window.location.hash.replace(/^#
 
 /**
  * Initializes the Firebase Auth observer.
- * Must be called once on application startup.
+ * Automatically called on startup.
  */
 export function initAuthBootstrap(onUserLoaded) {
     onAuthStateChanged(auth, async user => {
@@ -124,6 +136,9 @@ export function initAuthBootstrap(onUserLoaded) {
     });
 }
 
+// Automatically start auth bootstrap so authReadyPromise resolves on startup
+initAuthBootstrap();
+
 /**
  * Signs out the current web Firebase user.
  * Note: Does not affect the Android native session.
@@ -136,3 +151,4 @@ export async function logoutWeb() {
 }
 
 export { signInWithCustomToken };
+

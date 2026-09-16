@@ -4,7 +4,7 @@
  */
 
 import { router } from "./router.js";
-import { requireAuth } from "./auth.js";
+import { requireAuth, initAuthBootstrap } from "./auth.js";
 import {
     initAuth,
     renderHome,
@@ -59,5 +59,6 @@ router.add("/referrals", () => renderProfile(), true);
 router.add("/settings", () => renderSettings());
 
 // Boot Auth & Router
+initAuthBootstrap();
 initAuth();
 router.start();

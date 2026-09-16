@@ -32,7 +32,22 @@ class Router {
 
     navigate(path) {
         if (!path.startsWith("/")) path = "/" + path;
-        window.location.hash = path;
+        const targetHash = "#" + path;
+
+        // If currently on a subpath like /sso, clean address bar to root + hash
+        if (window.location.pathname !== "/" && !window.location.pathname.endsWith(".html")) {
+            try {
+                window.history.replaceState(null, "", "/" + targetHash);
+            } catch (_) {}
+            this.handleRoute();
+            return;
+        }
+
+        if (window.location.hash === targetHash) {
+            this.handleRoute();
+        } else {
+            window.location.hash = path;
+        }
     }
 
     getPath() {

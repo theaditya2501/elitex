@@ -813,6 +813,36 @@ export async function renderSso(params, query) {
     const app = $("appContainer");
     const token = (query && query.token) ? query.token.trim() : "";
     const requestedDest = (query && query.dest) ? query.dest.trim() : "/wallet";
+    const cleanDest = requestedDest.startsWith("/") ? requestedDest : "/" + requestedDest;
+
+    let transitioned = false;
+    const proceedToDest = (destPath = cleanDest) => {
+        if (transitioned) return;
+        transitioned = true;
+        try { authWatcher(); } catch (_) {}
+        showToast("Session connected!");
+        router.navigate(destPath);
+    };
+
+    // Fast-path: If user is already authenticated in this browser session, proceed immediately!
+    if (auth.currentUser) {
+        proceedToDest(cleanDest);
+        return;
+    }
+
+    // Active watcher: If session restores from IndexedDB while on this screen, proceed immediately!
+    const authWatcher = onAuthStateChanged(auth, (u) => {
+        if (u) {
+            proceedToDest(cleanDest);
+        }
+    });
+
+    // Check if auth becomes ready in background
+    waitForAuthReady().then((u) => {
+        if (u) {
+            proceedToDest(cleanDest);
+        }
+    });
 
     app.innerHTML = `
         <div class="login-wrap">
@@ -834,6 +864,13 @@ export async function renderSso(params, query) {
     `;
 
     if (!token) {
+        const existingUser = auth.currentUser || (await waitForAuthReady());
+        if (existingUser) {
+            proceedToDest(cleanDest);
+            return;
+        }
+
+        try { authWatcher(); } catch (_) {}
         $("ssoSpinner")?.classList.add("hidden");
         $("ssoHeading").textContent = "Authentication Required";
         $("ssoSubtitle").textContent = "No single sign-on token was provided.";
@@ -846,6 +883,14 @@ export async function renderSso(params, query) {
         const result = await processSsoToken(token);
 
         if (!result.success) {
+            // Check if user is actually authenticated
+            const currentU = auth.currentUser || (await waitForAuthReady());
+            if (currentU) {
+                proceedToDest(cleanDest);
+                return;
+            }
+
+            try { authWatcher(); } catch (_) {}
             $("ssoSpinner")?.classList.add("hidden");
             $("ssoHeading").textContent = "Authentication Failed";
             $("ssoSubtitle").textContent = "Unable to sign you in automatically.";
@@ -855,9 +900,15 @@ export async function renderSso(params, query) {
         }
 
         showToast("Authenticated successfully!");
-        const target = result.destination || requestedDest || "/wallet";
-        router.navigate(target);
+        const target = result.destination || cleanDest || "/wallet";
+        proceedToDest(target);
     } catch (e) {
+        const currentU = auth.currentUser || (await waitForAuthReady());
+        if (currentU) {
+            proceedToDest(cleanDest);
+            return;
+        }
+        try { authWatcher(); } catch (_) {}
         $("ssoSpinner")?.classList.add("hidden");
         $("ssoHeading").textContent = "Authentication Error";
         $("ssoErrorBox")?.classList.remove("hidden");
