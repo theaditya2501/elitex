@@ -159,7 +159,7 @@ function showSection(name) {
     if (name === "tournaments") loadTournamentsList();
     if (name === "matches") loadMatchesList();
     if (name === "br_results") initBrResults();
-    if (name === "lonewolf") initLoneWolf();
+    if (name === "1v1_matches" || name === "lonewolf") initOneVOneMatches();
     if (name === "results") loadResultsArchive();
     if (name === "deposits") loadDepositsList();
     if (name === "withdrawals") loadWithdrawalsList();
@@ -351,8 +351,15 @@ $("createTournament")?.addEventListener("click", async () => {
         const startVal = $("tStart").value;
         const startMs = startVal ? new Date(startVal).getTime() : Date.now() + 3600000;
 
-        await addDoc(collection(db, "tournaments"), {
+        const rId = $("tRoom").value.trim();
+        const rPass = $("tPass").value.trim();
+        const rel = $("tRelease").checked;
+        const timeStr = new Date(startMs).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true });
+
+        const tourneyData = {
             name: name,
+            title: name,
+            tournamentName: name,
             game: $("tGame").value.trim() || "Free Fire",
             mode: mode,
             map: $("tMap").value.trim() || "Bermuda",
@@ -361,22 +368,41 @@ $("createTournament")?.addEventListener("click", async () => {
             prize: prize,
             perKillCoins: perKill,
             perKill: perKill,
+            killPoint: perKill,
+            coinsPerKill: perKill,
             slots: slots,
             totalSlots: slots,
+            maxPlayers: slots,
             joinedSlots: 0,
             currentSlots: 0,
+            joined: 0,
             startTime: startMs,
             date: new Date(startMs).toLocaleString("en-IN"),
+            time: timeStr,
             status: $("tStatus").value,
-            roomId: $("tRoom").value.trim(),
-            roomPassword: $("tPass").value.trim(),
-            roomReleased: $("tRelease").checked,
-            releaseRoomDetails: $("tRelease").checked,
+            roomId: rId,
+            room_id: rId,
+            customRoomId: rId,
+            roomPassword: rPass,
+            roomPass: rPass,
+            room_pass: rPass,
+            password: rPass,
+            roomReleased: rel,
+            releaseRoomDetails: rel,
             description: $("tDesc").value.trim(),
             resultsPublished: false,
+            resultPublished: false,
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp()
-        });
+        };
+
+        // 1. Create in tournaments (source of truth)
+        const newRef = await addDoc(collection(db, "tournaments"), tourneyData);
+
+        // 2. Mirror to matches collection (same ID) so Android app can see it
+        try {
+            await setDoc(doc(db, "matches", newRef.id), tourneyData);
+        } catch (_) { /* best-effort */ }
 
         toast("Tournament created successfully!");
         $("tName").value = "";
@@ -385,6 +411,112 @@ $("createTournament")?.addEventListener("click", async () => {
         toast(e.message, true);
     }
 });
+
+function formatDateTimeHelper(val) {
+    if (!val) return "";
+    const d = new Date(val);
+    if (isNaN(d.getTime())) return "";
+    const now = new Date();
+    const formatted = d.toLocaleString("en-IN", {
+        weekday: "short",
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true
+    });
+
+    if (d.getTime() < now.getTime()) {
+        const pastMins = Math.round((now.getTime() - d.getTime()) / 60000);
+        return `<span style="color:var(--red);">⚠️ ${formatted} (${pastMins < 60 ? pastMins + 'm ago' : Math.floor(pastMins/60) + 'h ago'} - ALREADY PASSED) — matches in the past will show as CONCLUDED!</span>`;
+    }
+    const diffMs = d.getTime() - now.getTime();
+    const diffMins = Math.round(diffMs / 60000);
+    let relText = "";
+    if (diffMins < 60) {
+        relText = ` (in ${diffMins} min${diffMins === 1 ? '' : 's'})`;
+    } else {
+        const h = Math.floor(diffMins / 60);
+        const m = diffMins % 60;
+        relText = ` (in ${h} hr${h === 1 ? '' : 's'}${m > 0 ? ` ${m}m` : ''})`;
+    }
+
+    const hours = d.getHours();
+    if (hours < 12 && now.getHours() >= 12) {
+        return `<span style="color:var(--gold);">ℹ️ ${formatted}${relText} — <strong>Notice: ${hours === 0 ? '12:00 Midnight' : hours + ':00 AM (Morning)'}</strong>. If you mean evening, select PM or use 24h (${hours + 12}:00).</span>`;
+    }
+    return `<span style="color:var(--green);">✅ Starts: ${formatted}<strong>${relText}</strong></span>`;
+}
+
+$("tStart")?.addEventListener("input", (e) => {
+    const preview = $("tStartPreview");
+    if (preview) preview.innerHTML = formatDateTimeHelper(e.target.value);
+});
+
+$("editTourneyStart")?.addEventListener("input", (e) => {
+    const preview = $("editTourneyStartPreview");
+    if (preview) preview.innerHTML = formatDateTimeHelper(e.target.value);
+});
+
+$("quickReschedInput")?.addEventListener("input", (e) => {
+    const preview = $("quickReschedPreview");
+    if (preview) preview.innerHTML = formatDateTimeHelper(e.target.value);
+});
+
+function applyQuickTime(targetInputId, previewId, val) {
+    const input = $(targetInputId);
+    if (!input) return;
+    let targetDate;
+
+    if (val === "tomorrow") {
+        const cur = input.value ? new Date(input.value) : new Date();
+        targetDate = new Date(cur.getTime() + 86400000);
+    } else if (val.startsWith("today")) {
+        const hour = parseInt(val.slice(5, 7), 10);
+        const min = parseInt(val.slice(7, 9), 10);
+        targetDate = new Date();
+        targetDate.setHours(hour, min, 0, 0);
+        if (targetDate.getTime() < Date.now()) {
+            targetDate.setDate(targetDate.getDate() + 1);
+        }
+    } else {
+        const mins = parseInt(val, 10);
+        const base = input.value ? new Date(input.value) : new Date();
+        const startBase = base.getTime() < Date.now() ? new Date() : base;
+        targetDate = new Date(startBase.getTime() + mins * 60000);
+    }
+
+    const iso = new Date(targetDate.getTime() - targetDate.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    input.value = iso;
+    const preview = $(previewId);
+    if (preview) preview.innerHTML = formatDateTimeHelper(iso);
+}
+
+// Global delegated listener for quick timing preset buttons
+document.addEventListener("click", (e) => {
+    const btn = e.target.closest("button");
+    if (!btn) return;
+    if (btn.dataset.quickT) {
+        applyQuickTime("tStart", "tStartPreview", btn.dataset.quickT);
+    } else if (btn.dataset.editT) {
+        applyQuickTime("editTourneyStart", "editTourneyStartPreview", btn.dataset.editT);
+    } else if (btn.dataset.qresched) {
+        applyQuickTime("quickReschedInput", "quickReschedPreview", btn.dataset.qresched);
+    }
+});
+
+function initDefaultStartTime() {
+    const tStart = $("tStart");
+    if (tStart && !tStart.value) {
+        const nextHour = new Date(Date.now() + 3600000);
+        const iso = new Date(nextHour.getTime() - nextHour.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+        tStart.value = iso;
+        const preview = $("tStartPreview");
+        if (preview) preview.innerHTML = formatDateTimeHelper(iso);
+    }
+}
+setTimeout(initDefaultStartTime, 300);
 
 $("tMode")?.addEventListener("change", (e) => {
     if (e.target.value === "1v1") {
@@ -417,14 +549,23 @@ async function loadTournamentsList() {
                 <td>${money(t.entryFee)}</td>
                 <td style="color:var(--gold); font-weight:bold;">${money(t.prizePool ?? t.prize)}</td>
                 <td>${t.joinedSlots ?? t.currentSlots ?? 0} / ${t.slots ?? t.totalSlots ?? 0}</td>
-                <td>${formatDt(t.startTime || t.date)}</td>
+                <td>
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <span>${formatDt(t.startTime || t.date)}</span>
+                        <button class="mini" style="padding:2px 7px; font-size:10px; font-weight:700; background:rgba(0,230,118,0.12); color:var(--green); border-color:rgba(0,230,118,0.3);" data-quick-resched="${t.id}" title="Quickly edit timing">⏰ Edit Time</button>
+                    </div>
+                </td>
                 <td><span class="status ${t.status === 'live' ? 'active' : ''}">${esc(t.status || 'UPCOMING').toUpperCase()}</span></td>
                 <td>
-                    <button class="mini" data-edit-tourney="${t.id}">Edit</button>
+                    <button class="mini" data-edit-tourney="${t.id}">Edit All</button>
                     <button class="mini decline" data-del-tourney="${t.id}">Delete</button>
                 </td>
             </tr>
         `).join("");
+
+        document.querySelectorAll("[data-quick-resched]").forEach(b => {
+            b.onclick = () => openQuickRescheduleModal(b.dataset.quickResched);
+        });
 
         document.querySelectorAll("[data-edit-tourney]").forEach(b => {
             b.onclick = () => openEditTournamentModal(b.dataset.editTourney);
@@ -433,9 +574,30 @@ async function loadTournamentsList() {
         document.querySelectorAll("[data-del-tourney]").forEach(b => {
             b.onclick = async () => {
                 if (confirm("Are you sure you want to delete this tournament?")) {
-                    await deleteDoc(doc(db, "tournaments", b.dataset.delTourney));
-                    toast("Tournament deleted.");
+                    const tid = b.dataset.delTourney;
+                    // 1. Delete from tournaments collection (primary)
+                    await deleteDoc(doc(db, "tournaments", tid));
+
+                    // 2. Cascade-delete mirror doc & entries from matches collection
+                    try {
+                        const matchEntries = await getDocs(collection(db, "matches", tid, "entries"));
+                        const delBatch = [];
+                        matchEntries.forEach(e => delBatch.push(deleteDoc(e.ref)));
+                        await Promise.all(delBatch);
+                        await deleteDoc(doc(db, "matches", tid));
+                    } catch (_) { /* matches mirror may not exist — OK */ }
+
+                    // 3. Also delete entries subcollection from tournaments
+                    try {
+                        const tourneyEntries = await getDocs(collection(db, "tournaments", tid, "entries"));
+                        const delBatch2 = [];
+                        tourneyEntries.forEach(e => delBatch2.push(deleteDoc(e.ref)));
+                        await Promise.all(delBatch2);
+                    } catch (_) { /* no entries — OK */ }
+
+                    toast("Tournament deleted (including mirror & entries).");
                     loadTournamentsList();
+                    loadMatchesList();
                 }
             };
         });
@@ -460,8 +622,19 @@ async function openEditTournamentModal(tourneyId) {
         $("editTourneyId").value = t.id;
         $("editTourneyName").value = t.name || "";
         $("editTourneyGame").value = t.game || "Free Fire";
-        $("editTourneyMode").value = t.mode || "Solo";
+        
+        let curMode = t.mode || "Solo";
+        $("editTourneyMode").value = curMode;
+        if (!$("editTourneyMode").value) {
+            if (curMode.toLowerCase().includes("1v1") || curMode.toLowerCase().includes("lone")) $("editTourneyMode").value = "1v1";
+            else if (curMode.toLowerCase().includes("solo")) $("editTourneyMode").value = "Solo";
+            else if (curMode.toLowerCase().includes("duo")) $("editTourneyMode").value = "Duo";
+            else if (curMode.toLowerCase().includes("squad")) $("editTourneyMode").value = "Squad";
+        }
+
         $("editTourneyStatus").value = (t.status || "upcoming").toLowerCase();
+        if (!$("editTourneyStatus").value) $("editTourneyStatus").value = "upcoming";
+
         $("editTourneyMap").value = t.map || "Bermuda";
 
         const startMs = (t.startTime?.toDate ? t.startTime.toDate().getTime() : new Date(t.startTime || t.date || 0).getTime()) || 0;
@@ -469,14 +642,18 @@ async function openEditTournamentModal(tourneyId) {
             const dt = new Date(startMs);
             const iso = new Date(dt.getTime() - dt.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
             $("editTourneyStart").value = iso;
+            if ($("editTourneyStartPreview")) $("editTourneyStartPreview").innerHTML = formatDateTimeHelper(iso);
         } else {
             $("editTourneyStart").value = "";
+            if ($("editTourneyStartPreview")) $("editTourneyStartPreview").innerHTML = "";
         }
 
         $("editTourneyEntry").value = t.entryFee ?? 0;
         $("editTourneyPrize").value = t.prizePool ?? t.prize ?? 0;
         $("editTourneyPerKill").value = t.perKillCoins ?? t.perKill ?? 0;
         $("editTourneySlots").value = t.slots ?? t.totalSlots ?? 48;
+        if ($("editTourneyJoined")) $("editTourneyJoined").value = t.joinedSlots ?? t.currentSlots ?? t.joined ?? 0;
+        if ($("editTourneyDesc")) $("editTourneyDesc").value = t.description || t.rules || "";
         $("editTourneyRoom").value = t.roomId || "";
         $("editTourneyPass").value = t.roomPassword || "";
         $("editTourneyRelease").checked = t.roomReleased === true || t.roomReleased === "true" || t.releaseRoomDetails === true || t.releaseRoomDetails === "true";
@@ -510,9 +687,13 @@ $("editTournamentForm")?.addEventListener("submit", async e => {
         const rId = $("editTourneyRoom").value.trim();
         const rPass = $("editTourneyPass").value.trim();
         const rel = $("editTourneyRelease").checked;
+        const desc = $("editTourneyDesc")?.value.trim() || "";
+        const joinedVal = Number($("editTourneyJoined")?.value);
 
         const payload = {
             name: name,
+            title: name,
+            tournamentName: name,
             game: game,
             mode: mode,
             map: map,
@@ -522,28 +703,44 @@ $("editTournamentForm")?.addEventListener("submit", async e => {
             prizePool: prize,
             perKill: perKill,
             perKillCoins: perKill,
+            killPoint: perKill,
+            coinsPerKill: perKill,
             slots: slots,
             totalSlots: slots,
+            maxPlayers: slots,
+            description: desc,
+            rules: desc,
             roomId: rId,
+            room_id: rId,
+            customRoomId: rId,
             roomPassword: rPass,
+            roomPass: rPass,
+            room_pass: rPass,
+            password: rPass,
             roomReleased: rel,
             releaseRoomDetails: rel,
             updatedAt: serverTimestamp()
         };
 
+        if (!isNaN(joinedVal) && joinedVal >= 0) {
+            payload.joinedSlots = joinedVal;
+            payload.currentSlots = joinedVal;
+            payload.joined = joinedVal;
+            payload.joinedPlayers = joinedVal;
+        }
+
         if (startMs > 0) {
             payload.startTime = startMs;
             payload.date = new Date(startMs).toLocaleString("en-IN");
+            payload.time = new Date(startMs).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true });
         }
 
-        await updateDoc(doc(db, "tournaments", id), payload);
+        // 1. Save to tournaments (source of truth)
+        await setDoc(doc(db, "tournaments", id), payload, { merge: true });
 
+        // 2. Mirror to matches collection (create/merge)
         try {
-            const matchDoc = doc(db, "matches", id);
-            const mSnap = await getDoc(matchDoc);
-            if (mSnap.exists()) {
-                await updateDoc(matchDoc, payload);
-            }
+            await setDoc(doc(db, "matches", id), payload, { merge: true });
         } catch (_) {}
 
         $("editTournamentModal")?.classList.add("hidden");
@@ -552,6 +749,99 @@ $("editTournamentForm")?.addEventListener("submit", async e => {
         loadMatchesList();
     } catch (err) {
         toast("Update failed: " + err.message, true);
+    }
+});
+
+// Quick Reschedule Modal logic
+async function openQuickRescheduleModal(tourneyId) {
+    const modal = $("quickRescheduleModal");
+    if (!modal) return;
+
+    try {
+        const snap = await getDoc(doc(db, "tournaments", tourneyId));
+        if (!snap.exists()) {
+            toast("Tournament not found.", true);
+            return;
+        }
+
+        const t = { id: snap.id, ...snap.data() };
+        $("quickReschedId").value = t.id;
+        $("quickReschedTitle").textContent = `Reschedule: ${t.name || "Match"}`;
+
+        const startMs = (t.startTime?.toDate ? t.startTime.toDate().getTime() : new Date(t.startTime || t.date || 0).getTime()) || 0;
+        if (startMs > 0) {
+            $("quickReschedCurrent").innerHTML = `Current schedule: <strong style="color:#fff;">${formatDt(startMs)}</strong>`;
+            const dt = new Date(startMs);
+            const iso = new Date(dt.getTime() - dt.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+            $("quickReschedInput").value = iso;
+            if ($("quickReschedPreview")) $("quickReschedPreview").innerHTML = formatDateTimeHelper(iso);
+        } else {
+            $("quickReschedCurrent").textContent = "Current schedule: Not set";
+            applyQuickTime("quickReschedInput", "quickReschedPreview", "30");
+        }
+
+        $("quickReschedStatus").value = "upcoming";
+
+        const fullBtn = $("quickReschedFullEditBtn");
+        if (fullBtn) {
+            fullBtn.onclick = (e) => {
+                e.preventDefault();
+                modal.classList.add("hidden");
+                openEditTournamentModal(tourneyId);
+            };
+        }
+
+        modal.classList.remove("hidden");
+    } catch (e) {
+        toast("Error loading match: " + e.message, true);
+    }
+}
+
+$("closeQuickReschedModal")?.addEventListener("click", () => $("quickRescheduleModal")?.classList.add("hidden"));
+$("cancelQuickReschedBtn")?.addEventListener("click", () => $("quickRescheduleModal")?.classList.add("hidden"));
+
+$("quickRescheduleForm")?.addEventListener("submit", async e => {
+    e.preventDefault();
+    const id = $("quickReschedId").value;
+    if (!id) return;
+
+    const startVal = $("quickReschedInput").value;
+    if (!startVal) {
+        toast("Please select a valid start date and time.", true);
+        return;
+    }
+
+    const startMs = new Date(startVal).getTime();
+    if (isNaN(startMs)) {
+        toast("Invalid date/time.", true);
+        return;
+    }
+
+    const statusChoice = $("quickReschedStatus").value;
+
+    const payload = {
+        startTime: startMs,
+        date: new Date(startMs).toLocaleString("en-IN"),
+        time: new Date(startMs).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true }),
+        updatedAt: serverTimestamp()
+    };
+
+    if (statusChoice !== "keep") {
+        payload.status = statusChoice;
+    }
+
+    try {
+        await setDoc(doc(db, "tournaments", id), payload, { merge: true });
+        try {
+            await setDoc(doc(db, "matches", id), payload, { merge: true });
+        } catch (_) {}
+
+        $("quickRescheduleModal")?.classList.add("hidden");
+        toast("Match timing successfully updated!");
+        loadTournamentsList();
+        loadMatchesList();
+    } catch (err) {
+        toast("Reschedule failed: " + err.message, true);
     }
 });
 
@@ -572,7 +862,12 @@ async function loadMatchesList() {
                 <tr>
                     <td><strong>${esc(t.name)}</strong></td>
                     <td><span class="pill">${esc(t.mode || "Solo")}</span></td>
-                    <td>${formatDt(t.startTime || t.date)}</td>
+                    <td>
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <span>${formatDt(t.startTime || t.date)}</span>
+                            <button class="mini" style="padding:2px 7px; font-size:10px; font-weight:700; background:rgba(0,230,118,0.12); color:var(--green); border-color:rgba(0,230,118,0.3);" data-quick-resched="${t.id}" title="Quickly edit timing">⏰ Edit Time</button>
+                        </div>
+                    </td>
                     <td><input id="room_${t.id}" value="${esc(roomId)}" placeholder="Room ID" style="max-width:130px; padding:6px; font-family:monospace; font-weight:bold;"></td>
                     <td><input id="pass_${t.id}" value="${esc(roomPass)}" placeholder="Password" style="max-width:120px; padding:6px; font-family:monospace;"></td>
                     <td>
@@ -586,12 +881,21 @@ async function loadMatchesList() {
                     <td>
                         <div style="display:flex; gap:6px;">
                             <button class="mini approve" data-save-room="${t.id}">Save</button>
+                            <button class="mini" style="background:#151620; border:1px solid var(--line); color:#fff;" data-edit-tourney="${t.id}">Edit All</button>
                             <button class="mini" style="background:#151620; border:1px solid var(--line); color:#fff;" data-match-hist="${t.id}">Inspect</button>
                         </div>
                     </td>
                 </tr>
             `;
         }).join("");
+
+        document.querySelectorAll("[data-quick-resched]").forEach(b => {
+            b.onclick = () => openQuickRescheduleModal(b.dataset.quickResched);
+        });
+
+        document.querySelectorAll("[data-edit-tourney]").forEach(b => {
+            b.onclick = () => openEditTournamentModal(b.dataset.editTourney);
+        });
 
         document.querySelectorAll("[data-save-room]").forEach(b => {
             b.onclick = async () => {
@@ -609,24 +913,26 @@ async function loadMatchesList() {
 
                 const payload = {
                     roomId: rId,
+                    room_id: rId,
+                    customRoomId: rId,
                     roomPassword: rPass,
+                    roomPass: rPass,
+                    room_pass: rPass,
+                    password: rPass,
                     roomReleased: rel,
                     releaseRoomDetails: rel,
                     updatedAt: serverTimestamp()
                 };
 
-                await updateDoc(doc(db, "tournaments", id), payload);
+                await setDoc(doc(db, "tournaments", id), payload, { merge: true });
 
                 try {
-                    const matchDoc = doc(db, "matches", id);
-                    const mSnap = await getDoc(matchDoc);
-                    if (mSnap.exists()) {
-                        await updateDoc(matchDoc, payload);
-                    }
+                    await setDoc(doc(db, "matches", id), payload, { merge: true });
                 } catch (_) {}
 
                 toast(rel ? "Room credentials saved & RELEASED to players!" : "Room credentials saved (locked)!");
                 loadMatchesList();
+                loadTournamentsList();
             };
         });
 
@@ -851,12 +1157,17 @@ $("finalizeBrResultsBtn")?.addEventListener("click", async () => {
             status: "FINALIZED"
         });
 
-        // 2. Mark tournament completed
-        await updateDoc(doc(db, "tournaments", currentBrTournament.id), {
+        // 2. Mark tournament completed in tournaments and matches
+        const brCompletePayload = {
             status: "completed",
             resultsPublished: true,
+            resultPublished: true,
             updatedAt: serverTimestamp()
-        });
+        };
+        await setDoc(doc(db, "tournaments", currentBrTournament.id), brCompletePayload, { merge: true });
+        try {
+            await setDoc(doc(db, "matches", currentBrTournament.id), brCompletePayload, { merge: true });
+        } catch (_) {}
 
         // 3. Credit each winning player
         for (const r of brPlayerRows) {
@@ -1076,19 +1387,20 @@ $("oneVoneSaveRoomBtn")?.addEventListener("click", async () => {
 
     const payload = {
         roomId: rId,
+        room_id: rId,
+        customRoomId: rId,
         roomPassword: rPass,
+        roomPass: rPass,
+        room_pass: rPass,
+        password: rPass,
         roomReleased: rel,
         releaseRoomDetails: rel,
         updatedAt: serverTimestamp()
     };
 
-    await updateDoc(doc(db, "tournaments", current1v1Match.id), payload);
+    await setDoc(doc(db, "tournaments", current1v1Match.id), payload, { merge: true });
     try {
-        const matchDoc = doc(db, "matches", current1v1Match.id);
-        const mSnap = await getDoc(matchDoc);
-        if (mSnap.exists()) {
-            await updateDoc(matchDoc, payload);
-        }
+        await setDoc(doc(db, "matches", current1v1Match.id), payload, { merge: true });
     } catch (_) {}
 
     toast(rel ? "1v1 Room credentials saved & RELEASED to players!" : "1v1 Room credentials saved (locked)!");
@@ -1153,14 +1465,19 @@ async function finalize1v1Winner(winner, runnerUp) {
             finalizedBy: currentAdmin?.uid || "admin"
         });
 
-        // 2. Mark match completed
-        await updateDoc(doc(db, "tournaments", current1v1Match.id), {
+        // 2. Mark match completed in tournaments and matches
+        const completePayload1v1 = {
             status: "completed",
             resultsPublished: true,
+            resultPublished: true,
             winnerUid: winner.uid,
             winnerIgn: winner.ign,
             updatedAt: serverTimestamp()
-        });
+        };
+        await setDoc(doc(db, "tournaments", current1v1Match.id), completePayload1v1, { merge: true });
+        try {
+            await setDoc(doc(db, "matches", current1v1Match.id), completePayload1v1, { merge: true });
+        } catch (_) {}
 
         // 3. Atomically credit winner wallet
         if (prize > 0 && winner.uid && !winner.uid.startsWith("guest_")) {

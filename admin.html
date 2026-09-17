@@ -185,7 +185,20 @@
                         <label>Total Prize Pool (₹)<input id="tPrize" type="number" value="500" min="0"></label>
                         <label>Per Kill Reward (₹)<input id="tPerKill" type="number" value="5" min="0"></label>
                         <label>Total Player Slots<input id="tSlots" type="number" value="48" min="2"></label>
-                        <label>Start Date & Time<input id="tStart" type="datetime-local"></label>
+                        <label>Start Date & Time
+                            <input id="tStart" type="datetime-local">
+                            <span id="tStartPreview" style="display:block; font-size:11px; margin-top:4px; color:var(--muted);"></span>
+                            <div style="display:flex; flex-wrap:wrap; gap:5px; margin-top:6px;">
+                                <button type="button" class="mini" data-quick-t="15">+15m</button>
+                                <button type="button" class="mini" data-quick-t="30">+30m</button>
+                                <button type="button" class="mini" data-quick-t="60">+1h</button>
+                                <button type="button" class="mini" data-quick-t="today1900">7:00 PM</button>
+                                <button type="button" class="mini" data-quick-t="today1930">7:30 PM</button>
+                                <button type="button" class="mini" data-quick-t="today2000">8:00 PM</button>
+                                <button type="button" class="mini" data-quick-t="today2100">9:00 PM</button>
+                                <button type="button" class="mini" data-quick-t="tomorrow">Tomorrow</button>
+                            </div>
+                        </label>
                         <label>Status<select id="tStatus"><option value="upcoming">Upcoming</option><option value="registration_open">Registration Open</option><option value="live">Live</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option></select></label>
                         <label>Room ID<input id="tRoom" placeholder="Room ID"></label>
                         <label>Room Password<input id="tPass" placeholder="Room Password"></label>
@@ -941,16 +954,20 @@
                 <div class="form-grid">
                     <label>Game Mode
                         <select id="editTourneyMode">
+                            <option value="1v1">1v1 Duel / Lone Wolf</option>
                             <option value="Solo">Solo</option>
+                            <option value="Solo BR">Solo BR</option>
                             <option value="Duo">Duo</option>
+                            <option value="Duo BR">Duo BR</option>
                             <option value="Squad">Squad</option>
-                            <option value="1v1">1v1 Duel</option>
+                            <option value="Squad BR">Squad BR</option>
                             <option value="CS">Clash Squad (4v4)</option>
                         </select>
                     </label>
                     <label>Status
                         <select id="editTourneyStatus">
                             <option value="upcoming">Upcoming</option>
+                            <option value="registration_open">Registration Open</option>
                             <option value="live">Live Now</option>
                             <option value="completed">Completed</option>
                             <option value="cancelled">Cancelled</option>
@@ -959,7 +976,20 @@
                 </div>
                 <div class="form-grid">
                     <label>Map<input id="editTourneyMap" value="Bermuda"></label>
-                    <label>Match Start Time<input type="datetime-local" id="editTourneyStart"></label>
+                    <label>Match Start Time
+                        <input type="datetime-local" id="editTourneyStart">
+                        <span id="editTourneyStartPreview" style="display:block; font-size:11px; margin-top:4px; color:var(--muted);"></span>
+                        <div style="display:flex; flex-wrap:wrap; gap:5px; margin-top:6px;">
+                            <button type="button" class="mini" data-edit-t="15">+15m</button>
+                            <button type="button" class="mini" data-edit-t="30">+30m</button>
+                            <button type="button" class="mini" data-edit-t="60">+1h</button>
+                            <button type="button" class="mini" data-edit-t="today1900">7:00 PM</button>
+                            <button type="button" class="mini" data-edit-t="today1930">7:30 PM</button>
+                            <button type="button" class="mini" data-edit-t="today2000">8:00 PM</button>
+                            <button type="button" class="mini" data-edit-t="today2100">9:00 PM</button>
+                            <button type="button" class="mini" data-edit-t="tomorrow">Tomorrow</button>
+                        </div>
+                    </label>
                 </div>
                 <div class="form-grid">
                     <label>Entry Fee (₹)<input type="number" id="editTourneyEntry" min="0"></label>
@@ -967,8 +997,12 @@
                 </div>
                 <div class="form-grid">
                     <label>Per Kill Coins (₹)<input type="number" id="editTourneyPerKill" min="0"></label>
-                    <label>Max Slots<input type="number" id="editTourneySlots" min="2"></label>
+                    <label>Total Max Slots<input type="number" id="editTourneySlots" min="2"></label>
+                    <label>Booked Slots<input type="number" id="editTourneyJoined" min="0" placeholder="0"></label>
                 </div>
+                <label style="grid-column:1/-1;">Rules / Description
+                    <textarea id="editTourneyDesc" rows="3" placeholder="Match rules, restrictions, and instructions..."></textarea>
+                </label>
                 <div style="background:#0c0e15; border:1px solid var(--line); border-radius:12px; padding:16px; margin-top:4px;">
                     <span class="eyebrow" style="color:var(--green);">ROOM CREDENTIALS CONTROL</span>
                     <div class="form-grid" style="margin-top:10px;">
@@ -988,9 +1022,54 @@
         </div>
     </div>
 
+    <!-- Quick Reschedule Modal -->
+    <div id="quickRescheduleModal" class="modal-backdrop hidden">
+        <div class="user-modal" style="max-width:500px;">
+            <div class="modal-head">
+                <div>
+                    <span class="eyebrow" style="color:var(--green);">QUICK RESCHEDULE</span>
+                    <h2 id="quickReschedTitle">Reschedule Match Timing</h2>
+                    <p id="quickReschedCurrent" style="color:var(--muted); margin:4px 0 0; font-size:13px;"></p>
+                </div>
+                <button class="close-btn" id="closeQuickReschedModal">✕</button>
+            </div>
+            <form id="quickRescheduleForm" style="display:grid; gap:14px; margin-top:16px;">
+                <input type="hidden" id="quickReschedId">
+                <label>New Start Date & Time
+                    <input type="datetime-local" id="quickReschedInput" required>
+                    <span id="quickReschedPreview" style="display:block; font-size:11px; margin-top:4px; color:var(--muted);"></span>
+                </label>
+                <div style="display:flex; flex-wrap:wrap; gap:5px;">
+                    <button type="button" class="mini" data-qresched="15">+15m</button>
+                    <button type="button" class="mini" data-qresched="30">+30m</button>
+                    <button type="button" class="mini" data-qresched="60">+1h</button>
+                    <button type="button" class="mini" data-qresched="today1900">7:00 PM</button>
+                    <button type="button" class="mini" data-qresched="today1930">7:30 PM</button>
+                    <button type="button" class="mini" data-qresched="today2000">8:00 PM</button>
+                    <button type="button" class="mini" data-qresched="today2100">9:00 PM</button>
+                    <button type="button" class="mini" data-qresched="tomorrow">Tomorrow</button>
+                </div>
+                <label>Match Status on Reschedule
+                    <select id="quickReschedStatus">
+                        <option value="upcoming">Upcoming (Active / Open)</option>
+                        <option value="registration_open">Registration Open</option>
+                        <option value="keep">Keep Current Status</option>
+                    </select>
+                </label>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
+                    <button type="button" class="mini" id="quickReschedFullEditBtn" style="color:var(--gold); background:transparent; border:none; text-decoration:underline; cursor:pointer;">Open Full Editor →</button>
+                    <div style="display:flex; gap:10px;">
+                        <button type="button" class="btn btn-secondary" id="cancelQuickReschedBtn">Cancel</button>
+                        <button type="submit" class="btn btn-primary" id="saveQuickReschedBtn">Save New Timing</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Toast Notification -->
     <div id="toast" class="toast"></div>
 
-    <script type="module" src="js/admin.js"></script>
+    <script type="module" src="js/admin.js?v=2.8"></script>
 </body>
 </html>
