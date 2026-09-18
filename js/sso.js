@@ -22,17 +22,31 @@ export async function processSsoToken(token) {
         };
     }
 
+    // Fast-path: If user is already authenticated in this browser, proceed immediately
+    if (auth.currentUser) {
+        return {
+            success: true,
+            uid: auth.currentUser.uid,
+            destination: "/wallet"
+        };
+    }
+
     const cleanToken = token.trim();
 
-    // 1. Direct call to Python Backend on AWS (responds in ~10ms!)
+    // 1. Call backend verify-token with 3s timeout
     try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
+
         const response = await fetch(`${BACKEND_BASE}/api/sso/verify-token`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify({ token: cleanToken })
+            body: JSON.stringify({ token: cleanToken }),
+            signal: controller.signal
         });
+        clearTimeout(timeoutId);
 
         const data = await response.json().catch(() => ({}));
 
@@ -55,6 +69,6 @@ export async function processSsoToken(token) {
 
     return {
         success: false,
-        error: "Unable to verify single sign-on token. Please try again."
+        error: "Single sign-on is not available. Please log in directly with your email and password."
     };
 }

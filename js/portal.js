@@ -31,7 +31,7 @@ import {
 } from "./firebase.js";
 import { router } from "./router.js";
 import { requireAuth, waitForAuthReady, logoutWeb } from "./auth.js";
-import { processSsoToken } from "./sso.js";
+import { processSsoToken } from "./sso.js?v=2.8";
 
 // Utility helpers
 const $ = id => document.getElementById(id);

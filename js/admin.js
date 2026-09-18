@@ -2586,23 +2586,34 @@ $("addFaqBtn")?.addEventListener("click", async () => {
 // 15. PAYMENT & APP SETTINGS
 // =========================================================
 async function loadPaymentSettings() {
-    const docSnap = await getDoc(doc(db, "paymentSettings", "config"));
+    let docSnap = await getDoc(doc(db, "paymentSettings", "config"));
+    if (!docSnap.exists()) {
+        docSnap = await getDoc(doc(db, "settings", "payments"));
+    }
     if (docSnap.exists()) {
         const d = docSnap.data();
         if ($("payUpiId")) $("payUpiId").value = d.upiId || "";
-        if ($("payQrUrl")) $("payQrUrl").value = d.qrUrl || "";
-        if ($("payMinWithdraw")) $("payMinWithdraw").value = d.minWithdrawal || 50;
+        if ($("payQrUrl")) $("payQrUrl").value = d.qrImageUrl || d.qrUrl || "";
+        if ($("payMinWithdraw")) $("payMinWithdraw").value = d.minWithdrawal || 20;
     }
 }
 
 $("savePaymentSettingsBtn")?.addEventListener("click", async () => {
-    await setDoc(doc(db, "paymentSettings", "config"), {
-        upiId: $("payUpiId").value.trim(),
-        qrUrl: $("payQrUrl").value.trim(),
-        minWithdrawal: Number($("payMinWithdraw").value || 50),
+    const qr = $("payQrUrl").value.trim();
+    const upi = $("payUpiId").value.trim();
+    const minW = Number($("payMinWithdraw").value || 20);
+    const payload = {
+        upiId: upi,
+        qrUrl: qr,
+        qrImageUrl: qr,
+        minWithdrawal: minW,
+        mode: "manual",
+        enabled: true,
         razorpayKeyId: RAZORPAY_KEY_ID,
         updatedAt: serverTimestamp()
-    }, { merge: true });
+    };
+    await setDoc(doc(db, "paymentSettings", "config"), payload, { merge: true });
+    await setDoc(doc(db, "settings", "payments"), payload, { merge: true });
     toast("Payment settings saved.");
 });
 

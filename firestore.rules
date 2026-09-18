@@ -60,28 +60,32 @@ service cloud.firestore {
     match /deposits/{depositId} {
       allow read: if isAdmin() || (signedIn() && (resource == null || resource.data.uid == request.auth.uid || resource.data.userId == request.auth.uid));
       allow create: if signedIn();
-      allow update, delete: if isAdmin();
+      allow update: if isAdmin() || (signedIn() && (resource.data.uid == request.auth.uid || resource.data.userId == request.auth.uid));
+      allow delete: if isAdmin();
     }
 
     // Legacy deposit requests support
     match /depositRequests/{requestId} {
       allow read: if isAdmin() || (signedIn() && (resource == null || resource.data.uid == request.auth.uid || resource.data.userId == request.auth.uid));
       allow create: if signedIn();
-      allow update, delete: if isAdmin();
+      allow update: if isAdmin() || (signedIn() && (resource.data.uid == request.auth.uid || resource.data.userId == request.auth.uid));
+      allow delete: if isAdmin();
     }
 
     // Withdrawals
     match /withdrawals/{withdrawalId} {
       allow read: if isAdmin() || (signedIn() && (resource == null || resource.data.uid == request.auth.uid || resource.data.userId == request.auth.uid));
       allow create: if signedIn();
-      allow update, delete: if isAdmin();
+      allow update: if isAdmin() || (signedIn() && (resource.data.uid == request.auth.uid || resource.data.userId == request.auth.uid));
+      allow delete: if isAdmin();
     }
 
     // Legacy withdrawal requests support
     match /withdrawalRequests/{requestId} {
       allow read: if isAdmin() || (signedIn() && (resource == null || resource.data.uid == request.auth.uid || resource.data.userId == request.auth.uid));
       allow create: if signedIn();
-      allow update, delete: if isAdmin();
+      allow update: if isAdmin() || (signedIn() && (resource.data.uid == request.auth.uid || resource.data.userId == request.auth.uid));
+      allow delete: if isAdmin();
     }
 
     // Tournaments & subcollections
