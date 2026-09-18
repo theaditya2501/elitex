@@ -1118,7 +1118,7 @@ export async function renderTournaments(params, query) {
         };
     });
 
-    $(\"tourneySearch\")?.addEventListener(\"input\", () => _applyLobbyFilters(_currentLobbyMode));
+    $("tourneySearch")?.addEventListener("input", () => _applyLobbyFilters(_currentLobbyMode));
 }
 
 let cachedTournaments = [];
